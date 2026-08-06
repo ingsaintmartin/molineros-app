@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>MolineroApp - Ficha de Cliente</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-dim": "#dadad7",
+                    "primary-fixed-dim": "#88d982",
+                    "surface-variant": "#e2e3e0",
+                    "on-tertiary-fixed": "#2c160e",
+                    "on-tertiary-container": "#ffede9",
+                    "inverse-primary": "#88d982",
+                    "tertiary": "#6d4e45",
+                    "error": "#ba1a1a",
+                    "primary-container": "#2e7d32",
+                    "surface-container-highest": "#e2e3e0",
+                    "on-error-container": "#93000a",
+                    "secondary-container": "#62b4fe",
+                    "on-primary-container": "#cbffc2",
+                    "on-secondary-fixed": "#001d34",
+                    "primary-fixed": "#a3f69c",
+                    "on-primary-fixed-variant": "#005312",
+                    "on-secondary-container": "#004470",
+                    "surface-container-low": "#f4f4f1",
+                    "outline-variant": "#bfcaba",
+                    "surface-container": "#eeeeeb",
+                    "on-surface-variant": "#40493d",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#cfe5ff",
+                    "on-tertiary-fixed-variant": "#5d4037",
+                    "error-container": "#ffdad6",
+                    "on-error": "#ffffff",
+                    "tertiary-container": "#87665c",
+                    "secondary": "#00629e",
+                    "inverse-surface": "#2f312f",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "inverse-on-surface": "#f1f1ee",
+                    "background": "#f9f9f6",
+                    "on-secondary-fixed-variant": "#004a78",
+                    "surface-container-high": "#e8e8e5",
+                    "tertiary-fixed": "#ffdbd0",
+                    "on-primary-fixed": "#002204",
+                    "on-surface": "#1a1c1b",
+                    "on-background": "#1a1c1b",
+                    "secondary-fixed-dim": "#99cbff",
+                    "surface": "#f9f9f6",
+                    "outline": "#707a6c",
+                    "surface-tint": "#1b6d24",
+                    "primary": "#0d631b",
+                    "surface-bright": "#f9f9f6",
+                    "tertiary-fixed-dim": "#e7bdb1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "margin-tablet": "32px",
+                    "margin-mobile": "16px",
+                    "touch-target-min": "48px",
+                    "base": "8px",
+                    "stack-lg": "24px",
+                    "stack-sm": "4px",
+                    "gutter": "16px",
+                    "stack-md": "12px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Inter"],
+                    "label-bold": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "data-display": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "data-display": ["28px", {"lineHeight": "32px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+            }
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md pb-24 md:pb-0 min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-surface w-full top-0 sticky z-40 shadow-sm border-b-2 border-outline-variant">
+<div class="flex justify-between items-center px-margin-mobile h-touch-target-min w-full">
+<button aria-label="Volver" class="text-primary hover:bg-surface-container-high transition-colors duration-200 p-2 rounded-full flex items-center justify-center w-touch-target-min h-touch-target-min">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">AguaViento</h1>
+<button aria-label="Notificaciones" class="text-primary hover:bg-surface-container-high transition-colors duration-200 p-2 rounded-full flex items-center justify-center w-touch-target-min h-touch-target-min">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+</div>
+</header>
+<main class="px-margin-mobile md:px-margin-tablet py-stack-lg max-w-4xl mx-auto space-y-stack-lg">
+<!-- Datos del Cliente -->
+<section class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-gutter shadow-sm">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-stack-md border-b border-surface-variant pb-stack-md mb-stack-md">
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Estancia La Juanita</h2>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-lg">location_on</span> Ruta Provincial 41, Km 25. Pila, BA.
+                    </p>
+</div>
+<div class="flex gap-2 w-full md:w-auto">
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-primary text-on-primary font-label-bold text-label-bold px-4 py-3 rounded-lg border-b-2 border-surface-tint hover:bg-surface-tint active:translate-y-px transition-all">
+<span class="material-symbols-outlined">chat</span> WhatsApp
+                    </button>
+<button class="flex-1 md:flex-none flex items-center justify-center gap-2 border-2 border-secondary text-secondary font-label-bold text-label-bold px-4 py-3 rounded-lg hover:bg-secondary-container active:translate-y-px transition-all">
+<span class="material-symbols-outlined">call</span> Llamar
+                    </button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<div>
+<span class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider text-xs">Contacto Principal</span>
+<p class="font-body-lg text-body-lg text-on-surface">Don Roberto Sánchez (Capataz)</p>
+</div>
+<div>
+<span class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider text-xs">Última Visita</span>
+<p class="font-body-lg text-body-lg text-on-surface">12 de Octubre, 2023</p>
+</div>
+</div>
+</section>
+<!-- Establecimientos -->
+<section>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-stack-md border-b-2 border-outline-variant pb-2">Establecimientos Asociados</h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-gutter">
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-4 flex items-center justify-between">
+<div>
+<p class="font-label-bold text-label-bold text-on-surface">Lote Principal Sur</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">3 Molinos</p>
+</div>
+<span class="material-symbols-outlined text-primary">chevron_right</span>
+</div>
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-4 flex items-center justify-between">
+<div>
+<p class="font-label-bold text-label-bold text-on-surface">Cuartel Norte</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">1 Molino</p>
+</div>
+<span class="material-symbols-outlined text-primary">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Molinos -->
+<section>
+<div class="flex justify-between items-end mb-stack-md border-b-2 border-outline-variant pb-2">
+<h3 class="font-headline-md text-headline-md text-on-surface">Molinos Instalados</h3>
+<button class="text-primary font-label-bold text-label-bold flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined">add</span> Nuevo Molino
+                </button>
+</div>
+<div class="space-y-stack-md">
+<!-- Molino 1 (Verde) -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-0 flex overflow-hidden relative">
+<div class="w-2 bg-primary-fixed shrink-0"></div>
+<div class="p-4 flex-1 flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-low p-3 rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+</div>
+<div>
+<h4 class="font-label-bold text-label-bold text-on-surface text-lg">Molino M-01 "El Tajamar"</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Máquina 8 pies - Lote Principal</p>
+</div>
+</div>
+<div class="flex items-center justify-between md:justify-end gap-gutter w-full md:w-auto mt-2 md:mt-0">
+<span class="bg-primary-container text-on-primary-fixed-variant px-3 py-1 rounded-full text-sm font-label-bold flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary-fixed block"></span> Operativo
+                            </span>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Molino 2 (Amarillo) -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-0 flex overflow-hidden relative">
+<div class="w-2 bg-[#fbc02d] shrink-0"></div>
+<div class="p-4 flex-1 flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-low p-3 rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+</div>
+<div>
+<h4 class="font-label-bold text-label-bold text-on-surface text-lg">Molino M-02 "Bebedero Viejo"</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Máquina 10 pies - Cuartel Norte</p>
+</div>
+</div>
+<div class="flex items-center justify-between md:justify-end gap-gutter w-full md:w-auto mt-2 md:mt-0">
+<span class="bg-[#fff9c4] text-[#f57f17] px-3 py-1 rounded-full text-sm font-label-bold flex items-center gap-1 border border-[#fbc02d]">
+<span class="w-2 h-2 rounded-full bg-[#fbc02d] block"></span> Pendiente Mantenimiento
+                            </span>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Molino 3 (Rojo) -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-0 flex overflow-hidden relative">
+<div class="w-2 bg-error shrink-0"></div>
+<div class="p-4 flex-1 flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div class="flex items-center gap-4">
+<div class="bg-error-container p-3 rounded-full border border-error">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+</div>
+<div>
+<h4 class="font-label-bold text-label-bold text-on-surface text-lg">Molino M-03 "Fondo"</h4>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">Máquina 8 pies - Lote Principal</p>
+</div>
+</div>
+<div class="flex items-center justify-between md:justify-end gap-gutter w-full md:w-auto mt-2 md:mt-0">
+<span class="bg-error-container text-on-error-container px-3 py-1 rounded-full text-sm font-label-bold flex items-center gap-1 border border-error">
+<span class="w-2 h-2 rounded-full bg-error block"></span> Falla Grave
+                            </span>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface fixed bottom-0 w-full z-50 border-t-2 border-outline-variant flex justify-around items-center h-20 px-2 pb-2 md:hidden shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low active:scale-95 transition-transform duration-100 px-4 py-1 h-full w-full" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full hover:bg-surface-container-low active:scale-95 transition-transform duration-100 px-4 py-1 h-full w-full" href="#">
+<span class="material-symbols-outlined text-2xl mb-1" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-md text-label-md font-bold">Clientes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low active:scale-95 transition-transform duration-100 px-4 py-1 h-full w-full" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">map</span>
+<span class="font-label-md text-label-md">Mapa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low active:scale-95 transition-transform duration-100 px-4 py-1 h-full w-full" href="#">
+<span class="material-symbols-outlined text-2xl mb-1">calendar_today</span>
+<span class="font-label-md text-label-md">Agenda</span>
+</a>
+</nav>
+</body></html>

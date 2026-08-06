@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>MolineroApp - Mis Clientes y Molinos</title>
+  <meta name="description" content="App personal del molinero: clientes, molinos y reparaciones. Funciona sin señal." />
+  <meta name="theme-color" content="#0d631b" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button id="btnBack" class="icon-btn back-btn" aria-label="Volver">&#x2190;</button>
+    <h1 id="appTitle">MolineroApp</h1>
+    <button id="btnBackup" class="icon-btn" aria-label="Respaldo" title="Exportar respaldo">&#x1F4BE;</button>
+  </header>
+
+  <span id="statusLine" class="status-line" hidden></span>
+
+  <main id="view" class="view"></main>
+
+  <!-- Snackbar de avisos -->
+  <div id="snackbar" class="snackbar" hidden></div>
+
+  <!-- Ventana de respaldo -->
+  <div id="backupModal" class="modal" hidden>
+    <div class="modal-card">
+      <h2>&#x1F4BE; Respaldo de datos</h2>
+      <p class="modal-sub">Guardá una copia de todos tus clientes, molinos y reparaciones, o restaurá una copia guardada antes.</p>
+      <button id="btnExport" class="btn btn-primary w-full">&#x2B07; Exportar respaldo</button>
+      <button id="btnImportPick" class="btn btn-secondary w-full">&#x21A9;&#xFE0F; Restaurar respaldo</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden />
+      <button id="btnCloseBackup" class="btn btn-ghost w-full">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="vendor/dexie.min.js"></script>
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

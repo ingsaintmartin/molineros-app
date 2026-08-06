@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Historial de Reparaciones - AguaViento</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#dadad7",
+                      "primary-fixed-dim": "#88d982",
+                      "surface-variant": "#e2e3e0",
+                      "on-tertiary-fixed": "#2c160e",
+                      "on-tertiary-container": "#ffede9",
+                      "inverse-primary": "#88d982",
+                      "tertiary": "#6d4e45",
+                      "error": "#ba1a1a",
+                      "primary-container": "#2e7d32",
+                      "surface-container-highest": "#e2e3e0",
+                      "on-error-container": "#93000a",
+                      "secondary-container": "#62b4fe",
+                      "on-primary-container": "#cbffc2",
+                      "on-secondary-fixed": "#001d34",
+                      "primary-fixed": "#a3f69c",
+                      "on-primary-fixed-variant": "#005312",
+                      "on-secondary-container": "#004470",
+                      "surface-container-low": "#f4f4f1",
+                      "outline-variant": "#bfcaba",
+                      "surface-container": "#eeeeeb",
+                      "on-surface-variant": "#40493d",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed": "#cfe5ff",
+                      "on-tertiary-fixed-variant": "#5d4037",
+                      "error-container": "#ffdad6",
+                      "on-error": "#ffffff",
+                      "tertiary-container": "#87665c",
+                      "secondary": "#00629e",
+                      "inverse-surface": "#2f312f",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "inverse-on-surface": "#f1f1ee",
+                      "background": "#f9f9f6",
+                      "on-secondary-fixed-variant": "#004a78",
+                      "surface-container-high": "#e8e8e5",
+                      "tertiary-fixed": "#ffdbd0",
+                      "on-primary-fixed": "#002204",
+                      "on-surface": "#1a1c1b",
+                      "on-background": "#1a1c1b",
+                      "secondary-fixed-dim": "#99cbff",
+                      "surface": "#f9f9f6",
+                      "outline": "#707a6c",
+                      "surface-tint": "#1b6d24",
+                      "primary": "#0d631b",
+                      "surface-bright": "#f9f9f6",
+                      "tertiary-fixed-dim": "#e7bdb1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-tablet": "32px",
+                      "margin-mobile": "16px",
+                      "touch-target-min": "48px",
+                      "base": "8px",
+                      "stack-lg": "24px",
+                      "stack-sm": "4px",
+                      "gutter": "16px",
+                      "stack-md": "12px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Inter"],
+                      "label-bold": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "data-display": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "data-display": ["28px", {"lineHeight": "32px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-surface text-primary font-headline-md w-full top-0 sticky border-b-2 border-outline-variant transition-colors duration-200 flex justify-between items-center px-margin-mobile h-touch-target-min w-full z-40">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary cursor-pointer hover:bg-surface-container-high rounded-full p-2 transition-colors">agriculture</span>
+<span class="font-headline-md font-bold text-primary">AguaViento</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-high rounded-full p-2 transition-colors">notifications</span>
+</header>
+<main class="px-margin-mobile py-stack-lg max-w-3xl mx-auto flex flex-col gap-stack-lg">
+<!-- Header & FAB-like Button -->
+<div class="flex flex-col md:flex-row md:justify-between md:items-end gap-stack-md">
+<div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg mb-2">Historial de Reparaciones</h1>
+<p class="text-on-surface-variant flex items-center gap-2 font-label-bold text-label-bold">
+<span class="material-symbols-outlined filled-icon text-secondary">location_on</span>
+                    Molino Estancia San Carlos - M-042
+                </p>
+</div>
+<button class="bg-primary text-on-primary font-label-bold text-label-bold px-6 py-3 rounded-DEFAULT border-b-4 border-on-primary-fixed-variant hover:bg-surface-tint transition-all active:scale-95 flex items-center justify-center gap-2 min-h-touch-target-min w-full md:w-auto">
+<span class="material-symbols-outlined">add_circle</span>
+                Registrar Nueva Reparación
+            </button>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap gap-2 mb-stack-sm">
+<button class="px-4 py-2 bg-surface-container border-2 border-outline rounded-full font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-colors flex items-center gap-1">
+                Año <span class="material-symbols-outlined text-sm">arrow_drop_down</span>
+</button>
+<button class="px-4 py-2 bg-surface-container border-2 border-outline rounded-full font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-colors flex items-center gap-1">
+                Tipo <span class="material-symbols-outlined text-sm">arrow_drop_down</span>
+</button>
+<div class="flex-grow"></div>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-primary-container text-on-primary-container rounded-full font-label-md text-label-md border-2 border-primary-container flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary-fixed"></span> Completado
+                </span>
+<span class="px-3 py-1 bg-tertiary-container text-on-tertiary-container rounded-full font-label-md text-label-md border-2 border-tertiary-container flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-warning"></span> Pendiente
+                </span>
+</div>
+</div>
+<!-- Timeline -->
+<div class="relative border-l-2 border-outline-variant ml-4 md:ml-6 pl-6 flex flex-col gap-stack-lg">
+<!-- Timeline Item 1 -->
+<div class="relative">
+<div class="absolute -left-[35px] top-4 w-6 h-6 bg-primary rounded-full border-4 border-surface"></div>
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-4 shadow-sm relative overflow-hidden">
+<div class="absolute top-0 left-0 w-2 h-full bg-primary"></div>
+<div class="flex justify-between items-start mb-2 pl-4">
+<div>
+<span class="text-on-surface-variant font-label-md text-label-md">15 Oct 2023</span>
+<h3 class="font-headline-md text-headline-md text-on-surface mt-1">Cambio de Cueros</h3>
+</div>
+<span class="font-label-bold text-label-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded border-2 border-outline-variant">$45,000</span>
+</div>
+<div class="pl-4 mt-stack-md">
+<p class="text-on-surface-variant mb-2"><strong class="text-on-surface">Piezas:</strong> Kit de cueros 4", Válvula de retención.</p>
+<p class="text-on-surface-variant mb-4">Se reemplazaron los cueros desgastados. Se notó desgaste en la varilla central, requiere revisión próxima visita.</p>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<div class="relative h-24 rounded border-2 border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A rugged field technician's photo showing old, worn-out leather cup seals from a windmill pump, resting on a dusty wooden tailgate in bright, harsh daylight. High-contrast utility style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz1r6h8dIHld5BijTkUhk3xtpC-YqZORHH5tRrBfDYKm9Ci9BJvynmiG8_wFV6Z-dwp6x77HYKAXAs68blS8BtoxknsZOPgHG-K7p6aEHlVZ9B3mzUCG2ZEShFVoEZpButOftrpFyQen3zb7ixqklGYIzCD2YcWXmG7Fvpe-nQm48U0k67qaDCegHFEaR8rVROjpdProEkztGYE0tGD9N6E4o8Q5qD-jOetXS3PLcWBBF5zv1FktulJg"/>
+<span class="absolute bottom-1 left-1 bg-surface-container-highest px-1 text-xs font-label-bold text-on-surface rounded">Antes</span>
+</div>
+<div class="relative h-24 rounded border-2 border-outline-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A clean, new leather cup seal assembly for a windmill pump, freshly installed and gleaming with new brass fittings, held against a clear blue rural sky. Professional tool-first aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpEoPvHylMROhY27AiRQXt32dF1P5Hhd757SJV_0VVT_AyyCQcOGnsEQilbNoxuxPooTN5GX0dr2UuZUisfFLsUVhA4d7eT2JCc8b_lzq3F1xd135OS1rmnNsvWzauxbWT8LaEEgczX0_gSF45vUF_ir7WCRYFUA4LZ1GDAu7O5bW5yte02TjawLmSX226BMOjREmJzDrG144XaTaqO3NdrnqUMqb3fN8wWzScZTBbdOGU_SmezLTM0w"/>
+<span class="absolute bottom-1 left-1 bg-primary-container text-on-primary-container px-1 text-xs font-label-bold rounded">Después</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative">
+<div class="absolute -left-[35px] top-4 w-6 h-6 bg-secondary rounded-full border-4 border-surface"></div>
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-lg p-4 shadow-sm relative overflow-hidden">
+<div class="absolute top-0 left-0 w-2 h-full bg-secondary"></div>
+<div class="flex justify-between items-start mb-2 pl-4">
+<div>
+<span class="text-on-surface-variant font-label-md text-label-md">02 May 2023</span>
+<h3 class="font-headline-md text-headline-md text-on-surface mt-1">Lubricación General</h3>
+</div>
+<span class="font-label-bold text-label-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded border-2 border-outline-variant">$12,500</span>
+</div>
+<div class="pl-4 mt-stack-md">
+<p class="text-on-surface-variant mb-2"><strong class="text-on-surface">Materiales:</strong> Aceite SAE 30 (2L), Grasa de litio.</p>
+<p class="text-on-surface-variant">Mantenimiento preventivo de rutina. Caja de engranajes en buen estado.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface w-full z-50 fixed bottom-0 left-0 flex justify-around items-center h-20 px-2 pb-2 transition-transform duration-100">
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-colors rounded-DEFAULT active:scale-95 group">
+<span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">dashboard</span>
+<span class="font-label-md text-label-md mt-1">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-colors rounded-DEFAULT active:scale-95 group">
+<span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">group</span>
+<span class="font-label-md text-label-md mt-1">Clientes</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-colors rounded-DEFAULT active:scale-95 group">
+<span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">map</span>
+<span class="font-label-md text-label-md mt-1">Mapa</span>
+</button>
+<!-- Active Tab: Agenda -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-6 py-2 transition-transform duration-100 active:scale-95">
+<span class="material-symbols-outlined filled-icon text-2xl">calendar_today</span>
+<span class="font-label-md text-label-md mt-1 font-bold">Agenda</span>
+</button>
+</nav>
+</body></html>

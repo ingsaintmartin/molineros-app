@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AguaViento - Base de Datos de Productos</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#5d4037",
+                        "on-secondary-fixed-variant": "#004a78",
+                        "outline-variant": "#bfcaba",
+                        "on-error": "#ffffff",
+                        "surface-tint": "#1b6d24",
+                        "on-background": "#1a1c1b",
+                        "inverse-on-surface": "#f1f1ee",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f9f9f6",
+                        "on-surface": "#1a1c1b",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eeeeeb",
+                        "on-primary-container": "#cbffc2",
+                        "secondary-fixed-dim": "#99cbff",
+                        "on-primary-fixed": "#002204",
+                        "primary-container": "#2e7d32",
+                        "tertiary-fixed-dim": "#e7bdb1",
+                        "primary": "#0d631b",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#707a6c",
+                        "surface-variant": "#e2e3e0",
+                        "tertiary": "#6d4e45",
+                        "secondary": "#00629e",
+                        "secondary-fixed": "#cfe5ff",
+                        "surface-container-low": "#f4f4f1",
+                        "on-primary-fixed-variant": "#005312",
+                        "surface-container-highest": "#e2e3e0",
+                        "on-tertiary-container": "#ffede9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#004470",
+                        "surface-dim": "#dadad7",
+                        "background": "#f9f9f6",
+                        "secondary-container": "#62b4fe",
+                        "on-surface-variant": "#40493d",
+                        "inverse-primary": "#88d982",
+                        "tertiary-container": "#87665c",
+                        "tertiary-fixed": "#ffdbd0",
+                        "surface-container-high": "#e8e8e5",
+                        "on-tertiary-fixed": "#2c160e",
+                        "on-secondary-fixed": "#001d34",
+                        "surface": "#f9f9f6",
+                        "error": "#ba1a1a",
+                        "primary-fixed-dim": "#88d982",
+                        "inverse-surface": "#2f312f",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#a3f69c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "touch-target-min": "48px",
+                        "stack-lg": "24px",
+                        "stack-md": "12px",
+                        "margin-mobile": "16px",
+                        "base": "8px",
+                        "stack-sm": "4px",
+                        "gutter": "16px",
+                        "margin-tablet": "32px"
+                    },
+                    "fontFamily": {
+                        "data-display": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "label-bold": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "data-display": ["28px", { "lineHeight": "32px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "label-bold": ["14px", { "lineHeight": "20px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "26px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-surface dark:bg-surface-container-highest border-b-2 border-outline-variant dark:border-outline flex justify-between items-center px-margin-mobile h-touch-target-min z-40 transition-colors duration-200">
+<button aria-label="Menu" class="flex items-center justify-center w-touch-target-min h-touch-target-min text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-dim transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="agriculture" data-weight="fill" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">
+            AguaViento
+        </div>
+<button aria-label="Notifications" class="flex items-center justify-center w-touch-target-min h-touch-target-min text-on-surface-variant dark:text-surface-variant hover:bg-surface-container-high dark:hover:bg-surface-dim transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-7xl mx-auto px-margin-mobile py-stack-lg flex flex-col gap-stack-lg pb-[100px] md:pb-stack-lg">
+<!-- Header & Primary Actions -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-stack-md">
+<div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Inventario de Repuestos</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-stack-sm">Gestión de componentes para molinería y bombeo.</p>
+</div>
+<button class="h-touch-target-min bg-primary text-on-primary border-b-[3px] border-on-primary-fixed-variant rounded-DEFAULT px-gutter flex items-center justify-center gap-base font-label-bold text-label-bold active:translate-y-[2px] active:border-b-[1px] transition-all hover:bg-surface-tint">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                Agregar Producto
+            </button>
+</div>
+<!-- Search & Filter Bar -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant p-base rounded-DEFAULT flex flex-col md:flex-row gap-base items-center">
+<div class="relative w-full flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full h-touch-target-min pl-[48px] pr-base border-2 border-outline rounded-DEFAULT bg-surface-container-lowest font-body-md text-body-md text-on-surface focus:border-primary focus:ring-0 focus:outline-none placeholder:text-outline" placeholder="Buscar por código, nombre o categoría..." type="text"/>
+</div>
+<div class="flex gap-base w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+<button class="whitespace-nowrap h-touch-target-min px-gutter border-2 border-primary bg-primary-container text-on-primary-container rounded-DEFAULT font-label-bold text-label-bold">Todos</button>
+<button class="whitespace-nowrap h-touch-target-min px-gutter border-2 border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high rounded-DEFAULT font-label-bold text-label-bold">Cilindros</button>
+<button class="whitespace-nowrap h-touch-target-min px-gutter border-2 border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high rounded-DEFAULT font-label-bold text-label-bold">Válvulas</button>
+<button class="whitespace-nowrap h-touch-target-min px-gutter border-2 border-outline-variant bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high rounded-DEFAULT font-label-bold text-label-bold">Caños</button>
+</div>
+</div>
+<!-- Product Grid (Bento Style approach for rugged utility) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Item 1: Cuero -->
+<article class="relative bg-surface-container-lowest border-2 border-outline-variant rounded-DEFAULT flex flex-col overflow-hidden hover:border-outline transition-colors">
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-secondary"></div>
+<div class="p-stack-md pl-stack-lg flex flex-col h-full gap-stack-md">
+<div class="flex justify-between items-start">
+<div>
+<span class="inline-block bg-surface-container text-on-surface-variant px-2 py-1 rounded-DEFAULT font-label-md text-label-md mb-base border border-outline-variant uppercase tracking-wider text-[10px]">Consumible</span>
+<h3 class="font-headline-md text-headline-md text-on-surface leading-tight">Cueros de 3" para Cilindro</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Pack x 10 unidades. Cuero curtido alta resistencia.</p>
+</div>
+<img alt="Cuero de 3 pulgadas" class="w-[72px] h-[72px] object-cover rounded-DEFAULT border border-outline-variant bg-surface-container-low" data-alt="A macro studio shot of circular industrial leather seals for windmill cylinders, resting on a clean white surface under bright, high-contrast, modern lighting. The aesthetic is purely functional and utilitarian, reflecting rural engineering tools." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaCWclkuM-x26IGJ2gVBY5lVSbeBHYxWNC3APZVtXx_GXH2DNj_NQt0_HMqfem_tDGfhO_SVJUNQRV0p2tX_SIvqfLbldKA_LaAmbxTwH59pYaYPqeZXRadZ6dveHSK6MiA2WBi9lLkC1mRSdpyG7Xw9et3EgbMTPnbg3nB72r6sLhBEJEKeTOaU838pCoh0eUaqPKBnKe5j9verUggn8lEnC9HxlzCLNpBOaMsHRtLexOMwq_pm3EGg"/>
+</div>
+<div class="mt-auto pt-stack-md border-t-2 border-surface-container flex justify-between items-end">
+<div>
+<p class="font-label-md text-label-md text-outline mb-1">Stock Disponible</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="check_circle" data-weight="fill">check_circle</span>
+<span class="font-headline-md text-headline-md text-on-surface">145 <span class="font-body-md text-body-md text-on-surface-variant">packs</span></span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-label-md text-label-md text-outline mb-1">Precio Unitario</p>
+<p class="font-data-display text-data-display text-primary">$12.500</p>
+</div>
+</div>
+</div>
+</article>
+<!-- Item 2: Cilindro de Bronce -->
+<article class="relative bg-surface-container-lowest border-2 border-primary rounded-DEFAULT flex flex-col overflow-hidden shadow-[0_4px_0_0_#0d631b]">
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-primary"></div>
+<div class="absolute top-0 right-0 bg-primary text-on-primary px-3 py-1 font-label-bold text-label-bold text-[10px] uppercase rounded-bl-DEFAULT">Alta Rotación</div>
+<div class="p-stack-md pl-stack-lg flex flex-col h-full gap-stack-md">
+<div class="flex justify-between items-start mt-2">
+<div>
+<span class="inline-block bg-surface-container text-on-surface-variant px-2 py-1 rounded-DEFAULT font-label-md text-label-md mb-base border border-outline-variant uppercase tracking-wider text-[10px]">Cuerpo Molino</span>
+<h3 class="font-headline-md text-headline-md text-on-surface leading-tight">Cilindro de Bronce 3"</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Con rosca estándar y camisa pulida.</p>
+</div>
+<img alt="Cilindro Bronce" class="w-[72px] h-[72px] object-cover rounded-DEFAULT border border-outline-variant bg-surface-container-low" data-alt="A heavy, polished bronze cylinder component for a windmill water pump, isolated on a stark white background with sharp, defined lighting. The metal texture is highly detailed, conveying durability and precision engineering suitable for harsh rural environments." src="https://lh3.googleusercontent.com/aida-public/AB6AXuApzhwfBhjNCeDftiq95PUFUyloKxYRwGmwyFkxVL3_YSk3_O_wYvIbR6sP2hZjL9O2Uw6ZTMiwg3e_TlBaWK7PBT_nHTDlJMzykKLBf2NUi_2AzjA_TJAoScM4jJkk2-xgd5j43d8XXTTd3vyYtxJS8P56q9OS1CT9uRiEX4vcn7oXYhhssi2SkxYCevIfaAxhS0IjHvChqWWJIm_WGD80p1j7sfY76iHp-A0o_-Dbl4tfBx7oG8hqiA"/>
+</div>
+<div class="mt-auto pt-stack-md border-t-2 border-surface-container flex justify-between items-end">
+<div>
+<p class="font-label-md text-label-md text-outline mb-1">Stock Disponible</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-[20px]" data-icon="warning" data-weight="fill">warning</span>
+<span class="font-headline-md text-headline-md text-error">4 <span class="font-body-md text-body-md text-on-surface-variant">uds</span></span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-label-md text-label-md text-outline mb-1">Precio Unitario</p>
+<p class="font-data-display text-data-display text-on-surface">$185.000</p>
+</div>
+</div>
+</div>
+</article>
+<!-- Item 3: Válvula -->
+<article class="relative bg-surface-container-lowest border-2 border-outline-variant rounded-DEFAULT flex flex-col overflow-hidden hover:border-outline transition-colors">
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-secondary"></div>
+<div class="p-stack-md pl-stack-lg flex flex-col h-full gap-stack-md">
+<div class="flex justify-between items-start">
+<div>
+<span class="inline-block bg-surface-container text-on-surface-variant px-2 py-1 rounded-DEFAULT font-label-md text-label-md mb-base border border-outline-variant uppercase tracking-wider text-[10px]">Hidráulica</span>
+<h3 class="font-headline-md text-headline-md text-on-surface leading-tight">Válvula de Retención 2"</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Cuerpo de fundición, clapeta de goma.</p>
+</div>
+<img alt="Válvula retención" class="w-[72px] h-[72px] object-cover rounded-DEFAULT border border-outline-variant bg-surface-container-low" data-alt="A rugged cast-iron check valve with a rubber flapper, designed for water management systems. The object is presented clearly on a neutral, bright white background with high contrast, emphasizing its heavy-duty industrial nature in a clean, modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkMDWLvuS2Yy0launuKAnRGWHBvv5z5NknQ7w6mui7a5AEIK-XcCcz2xsPgBpsSzFWp94pv6BoNWsZGnYQQTFVaytJYFTBWoyYgZuhO43RYav9FvlZydSsmIQnrsnn7KDJwBVmfSNtdECi1xGbRpFmljMHzfGbUsmfqN96FltpN2gjU_ihxuE5MJeU8SxARL3B-VYv2WuiCbEDP5REwdHdRnmtqtJ9NCIXbkR88w5vxQgA3P8KQLTasw"/>
+</div>
+<div class="mt-auto pt-stack-md border-t-2 border-surface-container flex justify-between items-end">
+<div>
+<p class="font-label-md text-label-md text-outline mb-1">Stock Disponible</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="check_circle" data-weight="fill">check_circle</span>
+<span class="font-headline-md text-headline-md text-on-surface">22 <span class="font-body-md text-body-md text-on-surface-variant">uds</span></span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-label-md text-label-md text-outline mb-1">Precio Unitario</p>
+<p class="font-data-display text-data-display text-on-surface">$42.300</p>
+</div>
+</div>
+</div>
+</article>
+<!-- Item 4: Caño -->
+<article class="relative bg-surface-container-lowest border-2 border-outline-variant rounded-DEFAULT flex flex-col overflow-hidden hover:border-outline transition-colors">
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-secondary"></div>
+<div class="p-stack-md pl-stack-lg flex flex-col h-full gap-stack-md">
+<div class="flex justify-between items-start">
+<div>
+<span class="inline-block bg-surface-container text-on-surface-variant px-2 py-1 rounded-DEFAULT font-label-md text-label-md mb-base border border-outline-variant uppercase tracking-wider text-[10px]">Tubería</span>
+<h3 class="font-headline-md text-headline-md text-on-surface leading-tight">Caño Galv. 1 1/2" x 6m</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Espesor pared 2.5mm. Extremos roscados.</p>
+</div>
+<img alt="Caño Galvanizado" class="w-[72px] h-[72px] object-cover rounded-DEFAULT border border-outline-variant bg-surface-container-low" data-alt="A segment of galvanized steel pipe with threaded ends, resting horizontally on a pure white surface. High contrast lighting highlights the metallic sheen and rugged texture, fitting a utilitarian and professional engineering catalogue." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKXuDdoh66hLXN3BbgT882KRYKB7IxeSMvzJOP2l_02hRT34YoX9EKSC0FQ2smvSNPtiDIFyb4jDUNuoZspJgtBWn6SpzxZYoPAjgkz9YseJvWnMJBd2PimrqsWSTldyBSXhtAADZMN1sSdrIyo63uhU9DF2s2cCh4f6eMIZ2JHifE_Y--gWV0Dsq4egyyopf866nZ9pRDkfXDs3rd7wkp0savi_V7ULah9T-NTIp_MM7PKqP4fnBXYw"/>
+</div>
+<div class="mt-auto pt-stack-md border-t-2 border-surface-container flex justify-between items-end">
+<div>
+<p class="font-label-md text-label-md text-outline mb-1">Stock Disponible</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="check_circle" data-weight="fill">check_circle</span>
+<span class="font-headline-md text-headline-md text-on-surface">18 <span class="font-body-md text-body-md text-on-surface-variant">tiras</span></span>
+</div>
+</div>
+<div class="text-right">
+<p class="font-label-md text-label-md text-outline mb-1">Precio Unitario</p>
+<p class="font-data-display text-data-display text-on-surface">$35.000</p>
+</div>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 px-2 pb-2 bg-surface dark:bg-surface-container-highest border-t-2 border-outline-variant dark:border-outline z-50 md:hidden">
+<!-- Dashboard (Selected conceptually as home/hub, though technically an inventory page. Using active state logic here cautiously) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-transform duration-100 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-transform duration-100 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md mt-1">Clientes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-transform duration-100 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="map">map</span>
+<span class="font-label-md text-label-md mt-1">Mapa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-transform duration-100 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-label-md text-label-md mt-1">Agenda</span>
+</a>
+</nav>
+</body></html>

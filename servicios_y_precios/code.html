@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Lista de Precios - AguaViento</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#ffffff",
+                      "on-tertiary-fixed-variant": "#5d4037",
+                      "on-secondary-fixed-variant": "#004a78",
+                      "outline-variant": "#bfcaba",
+                      "on-error": "#ffffff",
+                      "surface-tint": "#1b6d24",
+                      "on-background": "#1a1c1b",
+                      "inverse-on-surface": "#f1f1ee",
+                      "on-error-container": "#93000a",
+                      "surface-bright": "#f9f9f6",
+                      "on-surface": "#1a1c1b",
+                      "error-container": "#ffdad6",
+                      "surface-container": "#eeeeeb",
+                      "on-primary-container": "#cbffc2",
+                      "secondary-fixed-dim": "#99cbff",
+                      "on-primary-fixed": "#002204",
+                      "primary-container": "#2e7d32",
+                      "tertiary-fixed-dim": "#e7bdb1",
+                      "primary": "#0d631b",
+                      "on-tertiary": "#ffffff",
+                      "outline": "#707a6c",
+                      "surface-variant": "#e2e3e0",
+                      "tertiary": "#6d4e45",
+                      "secondary": "#00629e",
+                      "secondary-fixed": "#cfe5ff",
+                      "surface-container-low": "#f4f4f1",
+                      "on-primary-fixed-variant": "#005312",
+                      "surface-container-highest": "#e2e3e0",
+                      "on-tertiary-container": "#ffede9",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-container": "#004470",
+                      "surface-dim": "#dadad7",
+                      "background": "#f9f9f6",
+                      "secondary-container": "#62b4fe",
+                      "on-surface-variant": "#40493d",
+                      "inverse-primary": "#88d982",
+                      "tertiary-container": "#87665c",
+                      "tertiary-fixed": "#ffdbd0",
+                      "surface-container-high": "#e8e8e5",
+                      "on-tertiary-fixed": "#2c160e",
+                      "on-secondary-fixed": "#001d34",
+                      "surface": "#f9f9f6",
+                      "error": "#ba1a1a",
+                      "primary-fixed-dim": "#88d982",
+                      "inverse-surface": "#2f312f",
+                      "on-primary": "#ffffff",
+                      "primary-fixed": "#a3f69c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "touch-target-min": "48px",
+                      "stack-lg": "24px",
+                      "stack-md": "12px",
+                      "margin-mobile": "16px",
+                      "base": "8px",
+                      "stack-sm": "4px",
+                      "gutter": "16px",
+                      "margin-tablet": "32px"
+              },
+              "fontFamily": {
+                      "data-display": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "label-bold": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "data-display": [
+                              "28px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-bold": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "26px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #f9f9f6; /* bg-background */
+            color: #1a1c1b; /* text-on-background */
+        }
+      </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-[100px] flex flex-col md:flex-row">
+<!-- TopAppBar (Web & Mobile) -->
+<header class="w-full top-0 sticky z-40 bg-surface border-b-2 border-outline-variant flex justify-between items-center px-margin-mobile h-touch-target-min transition-colors duration-200">
+<div class="flex items-center gap-base">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">agriculture</span>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">AguaViento</h1>
+</div>
+<div class="flex items-center gap-base">
+<button aria-label="Notificaciones" class="h-touch-target-min w-touch-target-min flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors duration-200 rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 w-full max-w-4xl mx-auto px-margin-mobile py-stack-lg md:px-margin-tablet flex flex-col gap-stack-lg">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-stack-md">
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface">Lista de Precios</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-stack-sm">Servicios habituales para molinería y mantenimiento.</p>
+</div>
+<button class="h-touch-target-min px-6 bg-primary text-on-primary font-label-bold text-label-bold rounded-lg border-b-4 border-on-primary-fixed-variant active:border-b-0 active:translate-y-[4px] flex items-center justify-center gap-2 transition-all shadow-sm w-full md:w-auto">
+<span class="material-symbols-outlined">add</span>
+                Nuevo Servicio
+            </button>
+</div>
+<!-- Search & Filter Bar -->
+<div class="flex flex-col sm:flex-row gap-base">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full h-touch-target-min pl-10 pr-4 bg-surface-container-lowest border-2 border-outline-variant rounded-lg font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-outline transition-colors" placeholder="Buscar servicio..." type="text"/>
+</div>
+<button class="h-touch-target-min px-4 bg-surface-container-low border-2 border-outline-variant rounded-lg flex items-center gap-2 text-on-surface font-label-bold text-label-bold hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+                Filtrar
+            </button>
+</div>
+<!-- Bento Grid / Cards Area -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<!-- Service Card 1 -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-sm hover:border-primary transition-colors group relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">build</span>
+<span class="font-label-bold text-label-bold">Mantenimiento Básico</span>
+</div>
+<button aria-label="Editar" class="text-outline hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mt-base">Cambio de cueros</h3>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1">Reemplazo de empaquetaduras y revisión de válvula de retención.</p>
+<div class="mt-stack-md flex justify-between items-end border-t-2 border-surface-container pt-stack-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant">Mano de obra sugerida</span>
+<span class="font-data-display text-data-display text-primary">$45.000</span>
+</div>
+</div>
+</div>
+<!-- Service Card 2 -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-sm hover:border-primary transition-colors group relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+<span class="font-label-bold text-label-bold">Preventivo</span>
+</div>
+<button aria-label="Editar" class="text-outline hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mt-base">Lubricación general</h3>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1">Engrase de rodamientos, revisión de aceite en caja reductora y ajuste de pernos.</p>
+<div class="mt-stack-md flex justify-between items-end border-t-2 border-surface-container pt-stack-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant">Mano de obra sugerida</span>
+<span class="font-data-display text-data-display text-primary">$28.000</span>
+</div>
+</div>
+</div>
+<!-- Service Card 3 -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-sm hover:border-primary transition-colors group relative overflow-hidden border-l-4 border-l-error">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2 text-error">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-label-bold text-label-bold">Reparación Mayor</span>
+</div>
+<button aria-label="Editar" class="text-outline hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mt-base">Pesca de cilindro</h3>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1">Recuperación de cilindro caído, inspección de varillas y rosca.</p>
+<div class="mt-stack-md flex justify-between items-end border-t-2 border-surface-container pt-stack-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant">Mano de obra sugerida</span>
+<span class="font-data-display text-data-display text-error">$120.000</span>
+</div>
+</div>
+</div>
+<!-- Service Card 4 -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-sm hover:border-primary transition-colors group relative overflow-hidden border-l-4 border-l-secondary-container">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-2 text-secondary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">engineering</span>
+<span class="font-label-bold text-label-bold">Instalación</span>
+</div>
+<button aria-label="Editar" class="text-outline hover:text-primary transition-colors p-1">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mt-base">Instalación de molino nuevo</h3>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1">Montaje de torre, instalación de máquina, varillas, cilindro y puesta en marcha.</p>
+<div class="mt-stack-md flex justify-between items-end border-t-2 border-surface-container pt-stack-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant">Mano de obra sugerida</span>
+<span class="font-data-display text-data-display text-secondary-container">$350.000</span>
+</div>
+</div>
+</div>
+<!-- Add New Quick Action Card -->
+<button class="bg-surface-container border-2 border-dashed border-outline-variant rounded-xl p-stack-md flex flex-col items-center justify-center gap-stack-sm hover:bg-surface-container-low hover:border-primary hover:text-primary transition-all text-on-surface-variant h-full min-h-[200px]">
+<span class="material-symbols-outlined text-4xl">add_circle</span>
+<span class="font-label-bold text-label-bold mt-2">Crear Nuevo Servicio</span>
+<span class="font-body-md text-body-md text-center">Agrega un servicio personalizado a tu catálogo.</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-20 px-2 pb-2 bg-surface border-t-2 border-outline-variant z-50 md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">list_alt</span>
+<span class="font-label-md text-label-md mt-1">Precios</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">map</span>
+<span class="font-label-md text-label-md mt-1">Mapa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-label-md text-label-md mt-1">Agenda</span>
+</a>
+</nav>
+<!-- SideNav (Desktop Only - Optional structural addition if requested, but hidden by default to match prompt requirements. Assuming single page view as requested) -->
+</body></html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AguaViento - Factura / Detalle de Cobro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary-container": "#87665c",
+                      "on-error": "#ffffff",
+                      "primary-fixed": "#a3f69c",
+                      "error": "#ba1a1a",
+                      "on-primary-container": "#cbffc2",
+                      "on-primary-fixed": "#002204",
+                      "outline-variant": "#bfcaba",
+                      "on-background": "#1a1c1b",
+                      "surface-bright": "#f9f9f6",
+                      "surface-container-highest": "#e2e3e0",
+                      "inverse-surface": "#2f312f",
+                      "on-secondary-container": "#004470",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#62b4fe",
+                      "outline": "#707a6c",
+                      "surface-container-low": "#f4f4f1",
+                      "on-tertiary-fixed": "#2c160e",
+                      "on-secondary-fixed": "#001d34",
+                      "surface-dim": "#dadad7",
+                      "background": "#f9f9f6",
+                      "primary-container": "#2e7d32",
+                      "inverse-primary": "#88d982",
+                      "inverse-on-surface": "#f1f1ee",
+                      "on-tertiary": "#ffffff",
+                      "primary": "#0d631b",
+                      "primary-fixed-dim": "#88d982",
+                      "on-secondary-fixed-variant": "#004a78",
+                      "secondary": "#00629e",
+                      "tertiary-fixed": "#ffdbd0",
+                      "surface-variant": "#e2e3e0",
+                      "on-tertiary-container": "#ffede9",
+                      "secondary-fixed-dim": "#99cbff",
+                      "tertiary": "#6d4e45",
+                      "surface-container": "#eeeeeb",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-fixed-variant": "#5d4037",
+                      "on-error-container": "#93000a",
+                      "surface-container-high": "#e8e8e5",
+                      "secondary-fixed": "#cfe5ff",
+                      "surface": "#f9f9f6",
+                      "tertiary-fixed-dim": "#e7bdb1",
+                      "on-surface": "#1a1c1b",
+                      "surface-tint": "#1b6d24",
+                      "on-surface-variant": "#40493d",
+                      "on-primary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "on-primary-fixed-variant": "#005312"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "base": "8px",
+                      "gutter": "16px",
+                      "touch-target-min": "48px",
+                      "margin-tablet": "32px",
+                      "stack-lg": "24px",
+                      "margin-mobile": "16px",
+                      "stack-md": "12px",
+                      "stack-sm": "4px"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "data-display": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "label-bold": ["Inter"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "data-display": ["28px", {"lineHeight": "32px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "label-bold": ["14px", {"lineHeight": "20px", "fontWeight": "700"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        /* Utility for Material Icons */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .stroke-thick {
+            font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md text-body-md min-h-screen pb-safe antialiased">
+<!-- TopAppBar (From JSON) -->
+<header class="bg-surface text-primary w-full top-0 sticky border-b-2 border-outline-variant flat no shadows flex justify-between items-center px-margin-mobile py-base h-touch-target-min z-50">
+<button aria-label="Volver" class="text-on-surface-variant hover:bg-surface-container-high active:scale-95 transition-transform duration-100 p-2 rounded-full flex items-center justify-center min-h-[48px] min-w-[48px]">
+<span class="material-symbols-outlined stroke-thick text-2xl">arrow_back</span>
+</button>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined icon-filled text-2xl">waves</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary uppercase tracking-wider">AguaViento</h1>
+</div>
+<button aria-label="Notificaciones" class="text-on-surface-variant hover:bg-surface-container-high active:scale-95 transition-transform duration-100 p-2 rounded-full flex items-center justify-center min-h-[48px] min-w-[48px]">
+<span class="material-symbols-outlined stroke-thick text-2xl">more_vert</span>
+</button>
+</header>
+<!-- Main Content Canvas (Navigation Shell Suppressed as per Task-Focused/Transactional rules) -->
+<main class="w-full max-w-3xl mx-auto p-margin-mobile flex flex-col gap-stack-lg">
+<!-- Header & Status -->
+<div class="flex flex-col md:flex-row md:justify-between items-start md:items-center gap-stack-md mt-4">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Detalle de Cobro</h2>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">Factura N° 0001-00004523</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Fecha: 24 Oct 2023</p>
+</div>
+<!-- Status Badge -->
+<div class="inline-flex items-center gap-2 bg-surface-container-lowest border-2 border-outline text-on-surface px-4 py-2 rounded-full shadow-sm">
+<span class="material-symbols-outlined text-outline text-lg">pending_actions</span>
+<span class="font-label-bold text-label-bold tracking-wide uppercase">Pendiente de Pago</span>
+</div>
+</div>
+<!-- Entity Details (Bento-style Grid) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<!-- Provider Card -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-sm relative overflow-hidden">
+<!-- Rugged detail accent -->
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-primary"></div>
+<div class="pl-2">
+<h3 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider mb-2">Prestador</h3>
+<p class="font-body-md text-body-md text-on-surface font-semibold">AguaViento Servicios Rurales</p>
+<p class="font-body-sm text-on-surface-variant mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">badge</span>
+                        CUIT: 30-71234567-8
+                    </p>
+<p class="font-body-sm text-on-surface-variant mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                        Ruta Prov. 85, Km 42, Coronel Suárez
+                    </p>
+</div>
+</div>
+<!-- Client Card -->
+<div class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-stack-md flex flex-col gap-stack-sm relative overflow-hidden">
+<!-- Rugged detail accent -->
+<div class="absolute left-0 top-0 bottom-0 w-2 bg-secondary"></div>
+<div class="pl-2">
+<h3 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider mb-2">Cliente y Trabajo</h3>
+<p class="font-body-md text-body-md text-on-surface font-semibold">Estancia La Juanita</p>
+<p class="font-body-sm text-on-surface-variant mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">agriculture</span>
+                        Molino Norte #4 (12 pies)
+                    </p>
+<p class="font-body-sm text-on-surface-variant mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">build</span>
+                        Reparación de cilindro y varillas
+                    </p>
+</div>
+</div>
+</div>
+<!-- Line Items Section (High-Contrast Utility Table/List) -->
+<section class="bg-surface-container-lowest border-2 border-outline rounded-xl overflow-hidden flex flex-col">
+<div class="bg-surface-container-high border-b-2 border-outline p-stack-md">
+<h3 class="font-label-bold text-label-bold text-on-surface uppercase tracking-wider">Conceptos</h3>
+</div>
+<div class="flex flex-col divide-y-2 divide-surface-container-highest">
+<!-- Item 1 -->
+<div class="p-stack-md flex flex-col md:flex-row justify-between items-start md:items-center gap-stack-sm">
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-medium">Cilindro de bronce 3" (Repuesto)</p>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">1 Unidad x $185.000,00</p>
+</div>
+<div class="font-body-md text-body-md text-on-surface font-semibold">
+                        $185.000,00
+                    </div>
+</div>
+<!-- Item 2 -->
+<div class="p-stack-md flex flex-col md:flex-row justify-between items-start md:items-center gap-stack-sm">
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-medium">Varilla de madera dura (Repuesto)</p>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">4 Unidades x $12.500,00</p>
+</div>
+<div class="font-body-md text-body-md text-on-surface font-semibold">
+                        $50.000,00
+                    </div>
+</div>
+<!-- Item 3 -->
+<div class="p-stack-md flex flex-col md:flex-row justify-between items-start md:items-center gap-stack-sm">
+<div class="flex-1">
+<p class="font-body-md text-body-md text-on-surface font-medium">Mano de obra especializada (Extracción y armado)</p>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">6 Horas x $8.000,00</p>
+</div>
+<div class="font-body-md text-body-md text-on-surface font-semibold">
+                        $48.000,00
+                    </div>
+</div>
+</div>
+<!-- Totals Footer -->
+<div class="bg-surface-container p-stack-md flex flex-col gap-stack-sm border-t-2 border-outline">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-md text-body-md">Subtotal</span>
+<span class="font-body-md text-body-md">$283.000,00</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-md text-body-md">IVA (21%)</span>
+<span class="font-body-md text-body-md">$59.430,00</span>
+</div>
+<div class="mt-4 pt-4 border-t-2 border-outline-variant flex justify-between items-end">
+<span class="font-headline-md text-headline-md text-on-surface uppercase tracking-wider">Total</span>
+<!-- Rugged, large display total -->
+<span class="font-data-display text-data-display text-primary tracking-tight">
+                        $342.430,00
+                    </span>
+</div>
+</div>
+</section>
+<!-- Actions -->
+<section class="flex flex-col gap-stack-md mt-4">
+<!-- Primary Action -->
+<button class="w-full min-h-touch-target-min bg-primary text-on-primary font-label-bold text-label-bold rounded-lg border-b-4 border-primary-fixed-dim hover:bg-surface-tint active:border-b-0 active:translate-y-1 transition-all duration-100 flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined icon-filled">price_check</span>
+                REGISTRAR PAGO
+            </button>
+<!-- Secondary Actions Row -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
+<button class="w-full min-h-touch-target-min bg-surface-container-lowest text-secondary font-label-bold text-label-bold rounded-lg border-2 border-secondary hover:bg-secondary-container hover:text-on-secondary-container active:bg-surface-dim transition-colors duration-200 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined stroke-thick">send_to_mobile</span>
+                    ENVIAR POR WHATSAPP
+                </button>
+<button class="w-full min-h-touch-target-min bg-surface-container-lowest text-on-surface font-label-bold text-label-bold rounded-lg border-2 border-outline hover:bg-surface-container-high active:bg-surface-dim transition-colors duration-200 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined stroke-thick">download</span>
+                    DESCARGAR PDF
+                </button>
+</div>
+</section>
+</main>
+</body></html>

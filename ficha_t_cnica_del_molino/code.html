@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MolineroApp - Ficha Técnica de Molino</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#dadad7",
+                      "primary-fixed-dim": "#88d982",
+                      "surface-variant": "#e2e3e0",
+                      "on-tertiary-fixed": "#2c160e",
+                      "on-tertiary-container": "#ffede9",
+                      "inverse-primary": "#88d982",
+                      "tertiary": "#6d4e45",
+                      "error": "#ba1a1a",
+                      "primary-container": "#2e7d32",
+                      "surface-container-highest": "#e2e3e0",
+                      "on-error-container": "#93000a",
+                      "secondary-container": "#62b4fe",
+                      "on-primary-container": "#cbffc2",
+                      "on-secondary-fixed": "#001d34",
+                      "primary-fixed": "#a3f69c",
+                      "on-primary-fixed-variant": "#005312",
+                      "on-secondary-container": "#004470",
+                      "surface-container-low": "#f4f4f1",
+                      "outline-variant": "#bfcaba",
+                      "surface-container": "#eeeeeb",
+                      "on-surface-variant": "#40493d",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed": "#cfe5ff",
+                      "on-tertiary-fixed-variant": "#5d4037",
+                      "error-container": "#ffdad6",
+                      "on-error": "#ffffff",
+                      "tertiary-container": "#87665c",
+                      "secondary": "#00629e",
+                      "inverse-surface": "#2f312f",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "inverse-on-surface": "#f1f1ee",
+                      "background": "#f9f9f6",
+                      "on-secondary-fixed-variant": "#004a78",
+                      "surface-container-high": "#e8e8e5",
+                      "tertiary-fixed": "#ffdbd0",
+                      "on-primary-fixed": "#002204",
+                      "on-surface": "#1a1c1b",
+                      "on-background": "#1a1c1b",
+                      "secondary-fixed-dim": "#99cbff",
+                      "surface": "#f9f9f6",
+                      "outline": "#707a6c",
+                      "surface-tint": "#1b6d24",
+                      "primary": "#0d631b",
+                      "surface-bright": "#f9f9f6",
+                      "tertiary-fixed-dim": "#e7bdb1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-tablet": "32px",
+                      "margin-mobile": "16px",
+                      "touch-target-min": "48px",
+                      "base": "8px",
+                      "stack-lg": "24px",
+                      "stack-sm": "4px",
+                      "gutter": "16px",
+                      "stack-md": "12px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "label-bold": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "data-display": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-bold": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "data-display": [
+                              "28px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "26px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill-1 {
+          font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+      </style>
+</head>
+<body class="bg-background text-on-background pb-32">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-container-highest w-full top-0 sticky border-b-2 border-outline-variant dark:border-outline flex justify-between items-center px-margin-mobile h-touch-target-min w-full z-40">
+<div class="flex items-center gap-gutter text-primary dark:text-primary-fixed">
+<button class="hover:bg-surface-container-high dark:hover:bg-surface-dim transition-colors duration-200 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">agriculture</span>
+</button>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">Detalle de Molino</h1>
+<div class="flex items-center text-primary dark:text-primary-fixed">
+<button class="hover:bg-surface-container-high dark:hover:bg-surface-dim transition-colors duration-200 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<main class="px-margin-mobile pt-stack-lg max-w-2xl mx-auto space-y-stack-lg">
+<!-- Molino Header Image & Status -->
+<section class="relative rounded-xl overflow-hidden border-2 border-outline-variant bg-surface-container-lowest">
+<div class="h-48 w-full bg-surface-container-high relative" data-alt="A rugged, vintage wind pump (molino) standing tall in a vast, arid rural landscape under a bright, high-contrast sun. The metal structure shows signs of wear and dependable utility. The setting is earthy and practical, emphasizing the critical nature of agricultural water management. The lighting highlights the geometric patterns of the blades against a clear blue sky." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBXzQ1HY3AeGXAAwvXNpYx2Ga6NdQr8NrcTZmyOwqzt348BKaiJqHB-Mty_XRyPxeMkdzMi7Fe7XGKLIgIhUx5qffclNevomrobONSkQ1ibZ7WxYeoAmYQhvdpDoxkxrm_BTdrHaK8W3BA76oACJDGy4nImDVO8dbAFLnORXYWSOFymTc7suGoZtaqQSZJIRTbQC6TRRmqhmoft2Mk5j8hXnfbbgwtuukAHJLS3gmFxDtzdqIe20FByOw')">
+<!-- Status Badge -->
+<div class="absolute top-base left-base bg-error text-on-error px-3 py-1 rounded-full font-label-bold text-label-bold flex items-center gap-1 border-2 border-on-error">
+<span class="material-symbols-outlined" style="font-size: 16px;">warning</span>
+                    Fuera de servicio
+                </div>
+</div>
+<div class="p-4 flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface">Molino Norte #4</h2>
+<p class="font-body-md text-body-md text-on-surface-variant flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined" style="font-size: 18px;">location_on</span> Estancia San José
+                    </p>
+</div>
+</div>
+</section>
+<!-- Technical Data Grid -->
+<section class="bg-surface-container-lowest border-2 border-outline-variant rounded-xl p-4">
+<h3 class="font-headline-md text-headline-md font-bold mb-4 flex items-center gap-2 border-b-2 border-outline-variant pb-2">
+<span class="material-symbols-outlined text-primary">engineering</span> Datos Técnicos
+            </h3>
+<div class="grid grid-cols-2 gap-y-stack-md gap-x-gutter">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Marca</span>
+<span class="font-body-lg text-body-lg font-semibold">Surgent</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Diámetro Cilindro</span>
+<span class="font-body-lg text-body-lg font-semibold">3"</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Profundidad</span>
+<span class="font-body-lg text-body-lg font-semibold">45m</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Última Revisión</span>
+<span class="font-body-lg text-body-lg font-semibold">12 May 2024</span>
+</div>
+</div>
+<div class="mt-stack-md pt-stack-md border-t-2 border-outline-variant grid grid-cols-2 gap-gutter">
+<div class="bg-surface-container p-3 rounded-lg border border-outline-variant">
+<span class="font-label-md text-label-md text-on-surface-variant block mb-1">Caños Succión</span>
+<span class="font-body-md text-body-md font-semibold">PVC 2"</span>
+</div>
+<div class="bg-surface-container p-3 rounded-lg border border-outline-variant">
+<span class="font-label-md text-label-md text-on-surface-variant block mb-1">Caños Impulsión</span>
+<span class="font-body-md text-body-md font-semibold">Galvanizado 1.5"</span>
+</div>
+</div>
+</section>
+<!-- Quick Actions -->
+<section class="grid grid-cols-1 gap-stack-sm">
+<button class="bg-primary text-on-primary font-label-bold text-label-bold h-touch-target-min rounded-lg flex items-center justify-center gap-2 border-b-4 border-[#094713] active:translate-y-1 active:border-b-0 transition-all w-full">
+<span class="material-symbols-outlined">build</span>
+                Iniciar Reparación
+            </button>
+<div class="grid grid-cols-2 gap-stack-sm mt-2">
+<button class="bg-surface-container-lowest text-secondary border-2 border-secondary font-label-bold text-label-bold h-touch-target-min rounded-lg flex items-center justify-center gap-2 active:bg-secondary-container transition-colors w-full">
+<span class="material-symbols-outlined">history</span>
+                    Ver Historial
+                </button>
+<button class="bg-surface-container-lowest text-secondary border-2 border-secondary font-label-bold text-label-bold h-touch-target-min rounded-lg flex items-center justify-center gap-2 active:bg-secondary-container transition-colors w-full">
+<span class="material-symbols-outlined">map</span>
+                    Ubicación en Mapa
+                </button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface dark:bg-surface-container-highest fixed bottom-0 w-full z-50 border-t-2 border-outline-variant dark:border-outline fixed bottom-0 left-0 w-full flex justify-around items-center h-20 px-2 pb-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high active:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined mb-1">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary-container text-on-primary-container dark:text-on-primary-container rounded-full px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high active:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined mb-1 fill-1">group</span>
+<span class="font-label-md text-label-md font-bold">Clientes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high active:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined mb-1">map</span>
+<span class="font-label-md text-label-md">Mapa</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container-low dark:hover:bg-surface-container-high active:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined mb-1">calendar_today</span>
+<span class="font-label-md text-label-md">Agenda</span>
+</a>
+</nav>
+</body></html>

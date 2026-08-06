@@ -1,0 +1,16 @@
+# Dependencias y artefactos que no se deben subir
+node_modules/
+dist/
+build/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs y temporales
+*.log
+npm-debug.log*
+
+# Carpetas internas / pruebas (si aparecen)
+_test/
+_chrometmp/
