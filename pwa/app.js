@@ -181,6 +181,7 @@ function bindGps() {
 /* ---------- Visualizador de fotos en pantalla completa ---------- */
 function abrirFoto(src) {
   const gal = document.createElement('div');
+    gal.id = 'fotoGallery';
   gal.className = 'modal';
   gal.style.padding = '0';
   gal.innerHTML = '<div style="position:relative;width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center;">' +
@@ -276,7 +277,10 @@ async function renderClienteForm() {
     '<input class="input" id="fTelefono" type="tel" value="' + esc(c.telefono) + '" placeholder="Ej.: 2317-555555" /></div>' +
     '<div class="form-group"><label for="fObs">Observaciones</label>' +
     '<textarea class="textarea" id="fObs" placeholder="Notas, cómo llegar, datos útiles…">' + esc(c.observaciones) + '</textarea></div>' +
+    '<div class="form-actions">' +
+    '<button class="btn btn-ghost btn-big" data-action="cancel-form">&#10005; Cancelar</button>' +
     '<button class="btn btn-primary btn-big" data-action="save-cliente">&#128190; Guardar cliente</button>' +
+    '</div>' +
     (id ? '<button class="btn btn-danger btn-big" data-action="delete-cliente" data-id="' + esc(id) + '">&#128465;&#65039; Eliminar cliente</button>' : '');
 }
 
@@ -362,7 +366,10 @@ async function renderMolinoForm() {
     '<div class="form-group"><label>Ubicación (opcional)</label>' +
     '<button type="button" class="gps-btn" id="useGps">&#128205; Usar mi ubicación actual</button>' + gps + '</div>' +
 
+    '<div class="form-actions">' +
+    '<button class="btn btn-ghost btn-big" data-action="cancel-form">&#10005; Cancelar</button>' +
     '<button class="btn btn-primary btn-big" data-action="save-molino">&#128190; Guardar molino</button>' +
+    '</div>' +
     (id ? '<button class="btn btn-danger btn-big" data-action="delete-molino" data-id="' + esc(id) + '">&#128465;&#65039; Eliminar molino</button>' : '');
 
   bindPhotoPicker();
@@ -476,7 +483,10 @@ async function renderReparacionForm() {
     '<div class="form-group"><label>Fotos</label>' + buildPhotoPicker(r.fotos) + '</div>' +
     '<div class="form-group"><label for="fObs">Observaciones</label>' +
     '<textarea class="textarea" id="fObs" placeholder="Notas adicionales…">' + esc(r.observaciones) + '</textarea></div>' +
+    '<div class="form-actions">' +
+    '<button class="btn btn-ghost btn-big" data-action="cancel-form">&#10005; Cancelar</button>' +
     '<button class="btn btn-primary btn-big" data-action="save-reparacion">&#128190; Guardar reparación</button>' +
+    '</div>' +
     (id ? '<button class="btn btn-danger btn-big" data-action="delete-reparacion" data-id="' + esc(id) + '">&#128465;&#65039; Eliminar reparación</button>' : '');
 
   bindPhotoPicker();
@@ -615,7 +625,8 @@ const ACTIONS = {
   'delete-molino': borrarMolino,
   'delete-reparacion': borrarReparacion,
   'ver-foto': d => abrirFoto(d.src),
-  'remove-photo': d => { App.fotosTemp.splice(+d.index, 1); refreshPhotoThumbs(); }
+    'remove-photo': d => { App.fotosTemp.splice(+d.index, 1); refreshPhotoThumbs(); },
+  'cancel-form': () => goBack()
 };
 /* ==================================================================
    RESPALDO (exportar / restaurar)
@@ -670,6 +681,13 @@ $view.addEventListener('click', ev => {
 $btnBack.addEventListener('click', goBack);
 $btnBackup.addEventListener('click', abrirBackup);
 $backupModal.addEventListener('click', ev => { if (ev.target === $backupModal) cerrarBackup(); });
+// Cerrar modales con Escape (comportamiento esperado en desktop)
+window.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  if ($backupModal && !$backupModal.hidden) { cerrarBackup(); return; }
+  const gal = document.getElementById('fotoGallery');
+  if (gal) gal.remove();
+});
 document.getElementById('btnCloseBackup').addEventListener('click', cerrarBackup);
 document.getElementById('btnExport').addEventListener('click', exportar);
 document.getElementById('btnImportPick').addEventListener('click', () => $importFile.click());

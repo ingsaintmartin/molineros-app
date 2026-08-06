@@ -112,6 +112,16 @@ body {
   color: var(--primary);
   border-bottom-color: var(--primary-container);
 }
+.status-line.sync {
+  background: #e3f2fd;
+  color: #1565c0;
+  border-bottom-color: #1565c0;
+}
+.status-line.offline {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-bottom-color: var(--warning);
+}
 
 /* ---------- Área de vistas ---------- */
 .view {
@@ -175,6 +185,10 @@ body {
   width: 100%;
 }
 .w-full { width: 100%; }
+
+/* ---------- Acciones de formulario (Cancelar / Guardar) ---------- */
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.form-actions .btn-big { width: auto; flex: 1 1 120px; }
 
 /* ---------- Encabezados de sección ---------- */
 .section-title {
@@ -452,6 +466,8 @@ body {
   z-index: 60;
   padding: var(--gutter);
 }
+/* Cuando el modal tiene [hidden], lo ocultamos aunque CSS diga display:flex */
+.modal[hidden] { display: none !important; }
 .modal-card {
   background: var(--surface);
   border-radius: var(--radius-lg);
