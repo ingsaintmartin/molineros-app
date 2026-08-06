@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "outputDirectory": "pwa",
+  "builds": [
+    {
+      "src": "pwa/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/pwa/$1"
+    }
+  ]
+}
