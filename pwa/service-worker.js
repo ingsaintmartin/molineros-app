@@ -7,7 +7,7 @@
    3. Cuando no hay señal, sirve lo que tiene en caché.
    ============================================================ */
 
-const CACHE = 'molineroapp-v1';
+const CACHE = 'molineroapp-v2';
 
 // Lista de archivos que se guardan al instalar
 const ARCHIVOS = [
@@ -16,9 +16,9 @@ const ARCHIVOS = [
   './styles.css',
   './app.js',
   './db.js',
+  './supabase-config.js',
   './manifest.json',
   './offline.html',
-  './vendor/dexie.min.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
@@ -50,6 +50,11 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+
+  // Las llamadas a Supabase y CDNs externas van siempre a la red
+  if (url.hostname.includes('supabase.co') ||
+      url.hostname.includes('jsdelivr.net') ||
+      url.hostname.includes('supabase.io')) return;
 
   // Para los archivos propios (misma app): primero caché, y si no hay,
   // los pedimos a la red y los guardamos.

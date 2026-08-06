@@ -14,3 +14,5 @@ npm-debug.log*
 # Carpetas internas / pruebas (si aparecen)
 _test/
 _chrometmp/
+
+.vercel

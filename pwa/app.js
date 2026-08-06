@@ -679,21 +679,55 @@ $importFile.addEventListener('change', ev => {
   ev.target.value = '';
 });
 
-// Indicador de conexión (offline / online)
+// Indicador de conexión y estado de sincronización
 const $status = document.getElementById('statusLine');
+
+function mostrarSincronizando() {
+  $status.textContent = '☁ Sincronizando datos...';
+  $status.className = 'status-line sync';
+  $status.hidden = false;
+}
+
+function mostrarSincronizado() {
+  $status.textContent = '☁ Datos sincronizados';
+  $status.className = 'status-line online';
+  $status.hidden = false;
+  setTimeout(() => { $status.hidden = true; }, 3000);
+}
+
 function actualizarEstado() {
   if (navigator.onLine) {
     $status.hidden = true;
-    $status.className = 'status-line online';
   } else {
-    $status.textContent = 'Sin señal: la app funciona igual, tus datos quedan guardados en el teléfono.';
+    $status.textContent = '📵 Sin señal — los datos se guardan en el teléfono y se sincronizarán al volver la conexión.';
     $status.hidden = false;
+    $status.className = 'status-line offline';
   }
 }
-window.addEventListener('online', actualizarEstado);
+// Arranque de la app
+async function iniciar() {
+  actualizarEstado();
+
+  if (isOnline()) {
+    mostrarSincronizando();
+    const ok = await sincronizarDesdeNube();
+    if (ok) mostrarSincronizado();
+    else { $status.hidden = true; }
+  }
+
+  render();
+}
+
+window.addEventListener('online', async () => {
+  actualizarEstado();
+  mostrarSincronizando();
+  const ok = await sincronizarDesdeNube();
+  if (ok) { mostrarSincronizado(); render(); }
+  else { $status.hidden = true; }
+});
 window.addEventListener('offline', actualizarEstado);
 
-// Registro del Service Worker (para que funcione instalada y offline)
+// Registro del Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js').then(reg => {
@@ -702,7 +736,4 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Primera pantalla
-render();
-actualizarEstado();
-
+iniciar();
