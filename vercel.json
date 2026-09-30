@@ -1,5 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "pwa",
+  "buildCommand": "node scripts/gen-turso-config.js",
   "cleanUrls": true,
   "headers": [
     {
@@ -54,7 +56,7 @@
           "value": "no-cache, no-store, must-revalidate"
         }
       ],
-      "source": "/supabase-config.js"
+      "source": "/turso-config.js"
     },
     {
       "headers": [

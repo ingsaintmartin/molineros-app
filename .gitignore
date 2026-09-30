@@ -13,6 +13,7 @@ npm-debug.log*
 
 # Credenciales locales (nunca subir)
 pwa/supabase-config.js
+pwa/turso-config.js
 
 # Carpetas internas / pruebas (si aparecen)
 _test/

@@ -7,7 +7,7 @@
    3. Cuando no hay señal, sirve lo que tiene en caché.
    ============================================================ */
 
-const CACHE = 'molineroapp-v4';
+const CACHE = 'molineroapp-v5';
 
 // Lista de archivos que se guardan al instalar.
 // IMPORTANTE: Dexie va en vendor/ local (no CDN) para que la app
@@ -20,7 +20,7 @@ const ARCHIVOS = [
   './app.js',
   './db.js',
   './vendor/dexie.min.js',
-  './supabase-config.js',
+  './turso-config.js',
   './manifest.json',
   './offline.html',
   './icons/icon-192.png',
@@ -57,10 +57,8 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // Las llamadas a Supabase y CDNs externas van siempre a la red
-  if (url.hostname.includes('supabase.co') ||
-      url.hostname.includes('jsdelivr.net') ||
-      url.hostname.includes('supabase.io')) return;
+  // Las llamadas a la nube (Turso) van siempre a la red
+  if (url.hostname.includes('turso.io')) return;
 
   // Para los archivos propios (misma app): primero caché, y si no hay,
   // los pedimos a la red y los guardamos.

@@ -1,9 +1,9 @@
 /* ============================================================
-   MolineroApp - Capa de datos (Supabase + IndexedDB local)
+   MolineroApp - Capa de datos (Turso + IndexedDB local)
    ------------------------------------------------------------
    Estrategia híbrida con cola de sincronización (outbox):
      - IndexedDB (Dexie): fuente de verdad local → funciona SIN internet
-     - Supabase: nube → sincroniza entre PC y celular
+     - Turso: nube → sincroniza entre PC y celular
      - Cola "pendientes": cada escritura (alta, edición, borrado)
        se registra como una operación. Si hay conexión se sube en
        el momento; si no, queda encolada y se sube EN ORDEN cuando
@@ -21,23 +21,64 @@ dbLocal.version(2).stores({
 });
 // Nota: la v1 no tenía "pendientes"; Dexie migra la base sola.
 
-// ---- Cliente Supabase (opcional: la app anda igual sin él) ----
-const SUPABASE_SIN_CONFIGURAR = 'TU-PROYECTO';
-const supabaseConfigOk =
-  typeof SUPABASE_URL !== 'undefined' &&
-  typeof SUPABASE_ANON_KEY !== 'undefined' &&
-  String(SUPABASE_URL).indexOf(SUPABASE_SIN_CONFIGURAR) === -1;
-const dbCloud = (typeof supabase !== 'undefined' && supabaseConfigOk)
-  ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+// ---- Nube Turso (opcional: la app anda igual sin ella) ----
+// Sin SDK: hablamos con Turso por su API HTTP con fetch directo.
+const TURSO_SIN_CONFIGURAR = 'TU-BASE';
+const tursoConfigOk =
+  typeof TURSO_URL !== 'undefined' &&
+  typeof TURSO_AUTH_TOKEN !== 'undefined' &&
+  String(TURSO_URL).indexOf(TURSO_SIN_CONFIGURAR) === -1 &&
+  String(TURSO_AUTH_TOKEN).indexOf('TU-TOKEN') === -1;
+// Aceptamos la URL en formato libsql:// (como la muestra Turso) o https://
+function tursoEndpoint() {
+  return String(TURSO_URL).replace(/^libsql:\/\//i, 'https://');
+}
+
+// Una consulta a Turso. Lanza si la base responde error.
+async function tursoQuery(sql, params) {
+  const res = await fetch(tursoEndpoint(), {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + TURSO_AUTH_TOKEN,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ statements: [{ q: sql, params: params || [] }] })
+  });
+  if (!res.ok) throw new Error('Turso HTTP ' + res.status);
+  const data = await res.json();
+  const primero = data && data[0];
+  if (!primero || primero.error) {
+    throw new Error(primero && primero.error ? primero.error : 'Respuesta inválida de Turso');
+  }
+  return primero.results; // { columns: [...], rows: [[...], ...] }
+}
+
+// Convierte una fila [v1, v2...] en objeto {col1: v1, col2: v2...}
+function filaAObjeto(columnas) {
+  return function (fila) {
+    const o = {};
+    for (let i = 0; i < columnas.length; i++) o[columnas[i]] = fila[i];
+    return o;
+  };
+}
 
 function isOnline() { return navigator.onLine; }
-// Hay nube utilizable solo si está configurada, cargó el SDK y hay red
-function nubeLista() { return !!dbCloud && navigator.onLine; }
+// Hay nube utilizable solo si está configurada y hay red
+function nubeLista() { return tursoConfigOk && navigator.onLine; }
 
 // ------------------------------------------------------------------
-// Mapeo: objetos JS ↔ filas de Supabase (snake_case)
+// Mapeo: objetos JS ↔ filas de Turso (snake_case)
 // ------------------------------------------------------------------
+// Las fotos viajan como JSON (TEXT en Turso); en local son arrays.
+function fotosToDb(fotos) { return JSON.stringify(fotos || []); }
+function fotosFromDb(valor) {
+  if (Array.isArray(valor)) return valor;
+  if (!valor) return [];
+  try {
+    const v = JSON.parse(valor);
+    return Array.isArray(v) ? v : [];
+  } catch (e) { return []; }
+}
 function clienteToRow(c) {
   return {
     id: c.id,
@@ -77,7 +118,7 @@ function molinoToRow(m) {
     observaciones: m.observaciones || null,
     lat: m.lat || null,
     lng: m.lng || null,
-    fotos: m.fotos || [],
+    fotos: fotosToDb(m.fotos),
     created_at: m.createdAt || Date.now()
   };
 }
@@ -97,7 +138,7 @@ function rowToMolino(r) {
     observaciones: r.observaciones || '',
     lat: r.lat || null,
     lng: r.lng || null,
-    fotos: r.fotos || [],
+    fotos: fotosFromDb(r.fotos),
     createdAt: r.created_at
   };
 }
@@ -112,7 +153,7 @@ function reparacionToRow(r) {
     piezas: r.piezas || null,
     costo: r.costo || null,
     observaciones: r.observaciones || null,
-    fotos: r.fotos || [],
+    fotos: fotosToDb(r.fotos),
     created_at: r.createdAt || Date.now()
   };
 }
@@ -126,7 +167,7 @@ function rowToReparacion(r) {
     piezas: r.piezas || '',
     costo: r.costo || '',
     observaciones: r.observaciones || '',
-    fotos: r.fotos || [],
+    fotos: fotosFromDb(r.fotos),
     createdAt: r.created_at
   };
 }
@@ -142,19 +183,36 @@ async function registrarOperacion(op) {
   if (nubeLista()) await subirPendientes();
 }
 
-// Sube UNA operación a Supabase. Lanza si falla.
+// Columnas de cada tabla en Turso (mismo orden que los mapeos de arriba)
+const COLUMNAS = {
+  clientes:     ['id', 'nombre', 'campo', 'localidad', 'telefono', 'observaciones', 'created_at'],
+  molinos:      ['id', 'cliente_id', 'nombre', 'tipo_instalacion', 'marca', 'modelo',
+                 'tamano_cilindro', 'diametro_succion', 'diametro_impulsion', 'profundidad_pozo',
+                 'estado', 'observaciones', 'lat', 'lng', 'fotos', 'created_at'],
+  reparaciones: ['id', 'molino_id', 'fecha', 'problema', 'trabajo', 'piezas',
+                 'costo', 'observaciones', 'fotos', 'created_at']
+};
+
+// Sube UNA operación a Turso. Lanza si falla.
 async function subirOperacion(op) {
-  let res;
+  const cols = COLUMNAS[op.tabla];
+  if (!cols) throw new Error('Tabla desconocida: ' + op.tabla);
   if (op.tipo === 'upsert') {
-    res = await dbCloud.from(op.tabla).upsert(op.row);
+    const valores = cols.map(c => (op.row[c] === undefined ? null : op.row[c]));
+    const ph = cols.map(() => '?').join(', ');
+    const actualiza = cols.filter(c => c !== 'id').map(c => c + ' = excluded.' + c).join(', ');
+    await tursoQuery(
+      'INSERT INTO ' + op.tabla + ' (' + cols.join(', ') + ') VALUES (' + ph + ')' +
+      ' ON CONFLICT(id) DO UPDATE SET ' + actualiza,
+      valores
+    );
   } else if (op.tipo === 'delete') {
-    res = await dbCloud.from(op.tabla).delete().eq('id', op.id);
+    await tursoQuery('DELETE FROM ' + op.tabla + ' WHERE id = ?', [op.id]);
   } else if (op.tipo === 'clear') {
-    res = await dbCloud.from(op.tabla).delete().neq('id', '___none___');
+    await tursoQuery('DELETE FROM ' + op.tabla, []);
   } else {
     throw new Error('Operación desconocida: ' + op.tipo);
   }
-  if (res.error) throw res.error;
 }
 
 // Sube la cola en orden. Si una falla, frena y el resto
@@ -185,26 +243,26 @@ async function contarPendientes() {
 // ------------------------------------------------------------------
 async function descargarDesdeNube() {
   try {
-    const [{ data: cls, error: e1 },
-           { data: mols, error: e2 },
-           { data: reps, error: e3 }] = await Promise.all([
-      dbCloud.from('clientes').select('*'),
-      dbCloud.from('molinos').select('*'),
-      dbCloud.from('reparaciones').select('*')
+    const [rc, rm, rr] = await Promise.all([
+      tursoQuery('SELECT * FROM clientes'),
+      tursoQuery('SELECT * FROM molinos'),
+      tursoQuery('SELECT * FROM reparaciones')
     ]);
-    if (e1 || e2 || e3) throw (e1 || e2 || e3);
+    const cls  = rc.rows.map(filaAObjeto(rc.columns));
+    const mols = rm.rows.map(filaAObjeto(rm.columns));
+    const reps = rr.rows.map(filaAObjeto(rr.columns));
 
     await dbLocal.transaction('rw', dbLocal.clientes, dbLocal.molinos, dbLocal.reparaciones, async () => {
       await dbLocal.clientes.clear();
       await dbLocal.molinos.clear();
       await dbLocal.reparaciones.clear();
-      if (cls  && cls.length)  await dbLocal.clientes.bulkAdd(cls.map(rowToCliente));
-      if (mols && mols.length) await dbLocal.molinos.bulkAdd(mols.map(rowToMolino));
-      if (reps && reps.length) await dbLocal.reparaciones.bulkAdd(reps.map(rowToReparacion));
+      if (cls.length)  await dbLocal.clientes.bulkAdd(cls.map(rowToCliente));
+      if (mols.length) await dbLocal.molinos.bulkAdd(mols.map(rowToMolino));
+      if (reps.length) await dbLocal.reparaciones.bulkAdd(reps.map(rowToReparacion));
     });
     return true;
   } catch (e) {
-    console.warn('No se pudo sincronizar desde Supabase:', e);
+    console.warn('No se pudo sincronizar desde Turso:', e);
     return false;
   }
 }
