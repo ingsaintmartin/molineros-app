@@ -15,6 +15,25 @@
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Fallback a CDN si Leaflet no está vendorizado en este despliegue.
+    // El mapa necesita internet para los mosaicos de todos modos; la app
+    // arranca offline igual (mapa.js ignora la ausencia de L).
+    (function () {
+      function desdeCDN() {
+        if (typeof L !== 'undefined') return;
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(css);
+        var js = document.createElement('script');
+        js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        document.head.appendChild(js);
+      }
+      window.__leafletCDN = desdeCDN;
+      window.addEventListener('load', function () { setTimeout(desdeCDN, 500); });
+    })();
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -41,11 +60,13 @@
     <div class="modal-card" id="modalCard" role="dialog" aria-modal="true"></div>
   </div>
 
-  <!-- Dexie y Leaflet van LOCALES (vendor/) para arrancar sin internet.
+  <!-- Dexie va LOCAL (vendor/) para arrancar sin internet.
+       Leaflet se intenta local primero y cae a CDN si el despliegue
+       no lo incluye vendorizado (ver fallback en <head>).
        Turso es opcional y no necesita SDK: sin claves en turso-config.js
        la app sigue funcionando 100% en local. -->
   <script src="vendor/dexie.min.js"></script>
-  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="vendor/leaflet/leaflet.js" onerror="window.__leafletCDN && window.__leafletCDN()"></script>
   <script src="turso-config.js"></script>
   <script src="db.js"></script>
   <script src="js/exif-gps.js"></script>
