@@ -7,15 +7,19 @@
    3. Cuando no hay señal, sirve lo que tiene en caché.
    ============================================================ */
 
-const CACHE = 'molineroapp-v3';
+const CACHE = 'molineroapp-v4';
 
-// Lista de archivos que se guardan al instalar
+// Lista de archivos que se guardan al instalar.
+// IMPORTANTE: Dexie va en vendor/ local (no CDN) para que la app
+// arranque sin internet. Si un archivo falla, no se rompe toda
+// la instalación (ver el .catch de abajo).
 const ARCHIVOS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './db.js',
+  './vendor/dexie.min.js',
   './supabase-config.js',
   './manifest.json',
   './offline.html',
@@ -27,7 +31,9 @@ const ARCHIVOS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
-      .then((cache) => cache.addAll(ARCHIVOS))
+      .then((cache) => Promise.all(
+        ARCHIVOS.map((url) => cache.add(url).catch(() => console.warn('[SW] No se pudo cachear:', url)))
+      ))
       .then(() => self.skipWaiting())
   );
 });

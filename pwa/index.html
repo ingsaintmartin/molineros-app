@@ -6,6 +6,10 @@
   <title>MolineroApp - Mis Clientes y Molinos</title>
   <meta name="description" content="App personal del molinero: clientes, molinos y reparaciones. Funciona sin señal." />
   <meta name="theme-color" content="#0d631b" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="MolineroApp" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
@@ -37,8 +41,10 @@
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/dexie@3/dist/dexie.min.js"></script>
+  <!-- Scripts: Dexie va LOCAL (vendor/) para que la app arranque sin internet.
+       Supabase es opcional: si el CDN falla o no hay claves, la app
+       sigue funcionando 100% en local. -->
+  <script src="vendor/dexie.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
   <script src="db.js"></script>
