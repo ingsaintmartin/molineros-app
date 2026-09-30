@@ -37,6 +37,14 @@ function esc(texto) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Las fotos se guardan como data URLs de imagen. Solo aceptamos ese
+// formato: cualquier otro string (p. ej. de un respaldo manipulado)
+// se descarta en vez de inyectarse en el HTML.
+function fotoSegura(f) {
+  const s = String(f || '');
+  return /^data:image\/(png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(s) ? s : '';
+}
+
 const $view = document.getElementById('view');
 const $title = document.getElementById('appTitle');
 const $btnBack = document.getElementById('btnBack');
@@ -117,11 +125,14 @@ function buildPhotoPicker(fotos) {
 function refreshPhotoThumbs() {
   const cont = document.getElementById('photoThumbs');
   if (!cont) return;
-  cont.innerHTML = App.fotosTemp.map((f, i) =>
-    '<div class="photo-thumb">' +
-    '<img src="' + f + '" alt="Foto" />' +
-    '<button type="button" class="remove" data-action="remove-photo" data-index="' + i + '" aria-label="Quitar foto">&#10005;</button>' +
-    '</div>').join('');
+  cont.innerHTML = App.fotosTemp.map((f, i) => {
+    const src = fotoSegura(f);
+    if (!src) return '';
+    return '<div class="photo-thumb">' +
+      '<img src="' + src + '" alt="Foto" />' +
+      '<button type="button" class="remove" data-action="remove-photo" data-index="' + i + '" aria-label="Quitar foto">&#10005;</button>' +
+      '</div>';
+  }).join('');
 }
 
 function bindPhotoPicker() {
@@ -133,22 +144,49 @@ function bindPhotoPicker() {
   }
 }
 
-function leerFotos(e) {
-  const files = Array.from(e.target.files || []);
-  let pendientes = files.length;
-  if (!pendientes) return;
-  files.forEach(archivo => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      App.fotosTemp.push(ev.target.result);
-      pendientes--;
-      if (pendientes === 0) {
-        refreshPhotoThumbs();
-        e.target.value = '';
-      }
+const MAX_FOTOS = 12;      // tope de fotos por ficha
+const FOTO_MAX_PX = 1280;   // lado mayor máximo al guardar
+
+// Reduce la foto a un tamaño razonable (las de la cámara son enormes)
+// y la devuelve como JPEG liviano. Así la base no crece sin control.
+function procesarFoto(archivo) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(archivo);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const escala = Math.min(1, FOTO_MAX_PX / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * escala));
+      const h = Math.max(1, Math.round(img.height * escala));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
     };
-    reader.readAsDataURL(archivo);
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('foto')); };
+    img.src = url;
   });
+}
+
+function leerFotos(e) {
+  const input = e.target;
+  const lugar = MAX_FOTOS - App.fotosTemp.length;
+  const files = Array.from(input.files || []).slice(0, Math.max(0, lugar));
+  input.value = '';
+  if (!files.length) {
+    if (App.fotosTemp.length >= MAX_FOTOS) snack('Máximo ' + MAX_FOTOS + ' fotos por ficha.');
+    return;
+  }
+  snack('Procesando fotos…');
+  Promise.all(files.map(procesarFoto)).then(
+    urls => {
+      App.fotosTemp.push(...urls.map(fotoSegura).filter(Boolean));
+      refreshPhotoThumbs();
+      snack('Fotos agregadas.');
+    },
+    () => snack('No se pudieron procesar algunas fotos.')
+  );
 }
 
 /* ---------- GPS ---------- */
@@ -180,6 +218,8 @@ function bindGps() {
 
 /* ---------- Visualizador de fotos en pantalla completa ---------- */
 function abrirFoto(src) {
+  src = fotoSegura(src);
+  if (!src) return;
   const gal = document.createElement('div');
     gal.id = 'fotoGallery';
   gal.className = 'modal';
@@ -221,12 +261,17 @@ function formGroup(tipo, id, label, valor, hint, requerido) {
 }
 
 /* ---------- Vista: lista de clientes ---------- */
+function normalizarTexto(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function filtraClientes(q) {
-  if (!q) return App.allClientes.slice();
+  const nq = normalizarTexto(q);
+  if (!nq) return App.allClientes.slice();
   return App.allClientes.filter(c =>
-    (c.nombre || '').toLowerCase().includes(q) ||
-    (c.campo || '').toLowerCase().includes(q) ||
-    (c.localidad || '').toLowerCase().includes(q));
+    normalizarTexto(c.nombre).includes(nq) ||
+    normalizarTexto(c.campo).includes(nq) ||
+    normalizarTexto(c.localidad).includes(nq));
 }
 
 function clienteCardsHTML(lista) {
@@ -245,7 +290,7 @@ function clienteCardsHTML(lista) {
 
 async function renderClientes() {
   App.allClientes = await getClientes();
-  const lista = filtraClientes((App.params.q || '').toLowerCase());
+  const lista = filtraClientes(App.params.q || '');
   $view.innerHTML =
     '<input class="search-box" id="clienteSearch" type="search" placeholder="&#128269; Buscar por nombre o campo" value="' + esc(App.params.q || '') + '" />' +
     '<button class="btn btn-primary btn-big" data-action="nav-cliente-form">&#10133; Nuevo cliente</button>' +
@@ -254,7 +299,7 @@ async function renderClientes() {
 
   const s = document.getElementById('clienteSearch');
   s.addEventListener('input', () => {
-    const ll = filtraClientes(s.value.toLowerCase());
+    const ll = filtraClientes(s.value);
     document.getElementById('clienteCount').textContent = 'Clientes (' + ll.length + ')';
     document.getElementById('clienteList').innerHTML = clienteCardsHTML(ll);
   });
@@ -402,10 +447,11 @@ async function renderFichaMolino() {
     '<div class="card-row" style="margin-top:4px">' + badgeEstado(m.estado) + '</div></div>';
 
   // Foto principal (si hay)
-  if (m.fotos && m.fotos.length) {
+  const fotosMolino = (m.fotos || []).map(fotoSegura).filter(Boolean);
+  if (fotosMolino.length) {
     html += '<div class="section-title">Fotos</div>' +
       '<div class="photo-gallery">' +
-      m.fotos.map(f => '<div class="photo-thumb" data-action="ver-foto" data-src="' + f + '"><img src="' + f + '" alt="Foto" /></div>').join('') +
+      fotosMolino.map(f => '<div class="photo-thumb" data-action="ver-foto" data-src="' + f + '"><img src="' + f + '" alt="Foto" /></div>').join('') +
       '</div>';
   }
 
@@ -441,8 +487,9 @@ async function renderFichaMolino() {
       const trabajo = r.trabajo ? '<p class="tl-body"><strong>Trabajo realizado:</strong> ' + esc(r.trabajo) + '</p>' : '';
       const piezas = r.piezas ? '<p class="tl-body"><strong>Piezas utilizadas:</strong> ' + esc(r.piezas) + '</p>' : '';
       const obs = r.observaciones ? '<p class="tl-body"><strong>Observaciones:</strong> ' + esc(r.observaciones) + '</p>' : '';
-      const fotos = (r.fotos && r.fotos.length)
-        ? '<div class="tl-photos">' + r.fotos.map(f => '<div class="photo-thumb" data-action="ver-foto" data-src="' + f + '"><img src="' + f + '" alt="Foto" /></div>').join('') + '</div>'
+      const fotosRep = (r.fotos || []).map(fotoSegura).filter(Boolean);
+      const fotos = fotosRep.length
+        ? '<div class="tl-photos">' + fotosRep.map(f => '<div class="photo-thumb" data-action="ver-foto" data-src="' + f + '"><img src="' + f + '" alt="Foto" /></div>').join('') + '</div>'
         : '';
       return '<div class="timeline-item">' +
         '<div class="tl-stripe"></div>' +
@@ -657,6 +704,7 @@ async function restaurar(archivo) {
     snack('Respaldo restaurado: ' + res.clientes + ' clientes, ' + res.molinos + ' molinos, ' + res.reparaciones + ' reparaciones.');
     cerrarBackup();
     App.history = [];
+    await sincronizarYMostrar(); // sube el respaldo a la nube si hay conexión
     go('clientes', {});
   } catch (e) {
     console.error(e);
@@ -713,6 +761,30 @@ function mostrarSincronizado() {
   setTimeout(() => { $status.hidden = true; }, 3000);
 }
 
+function mostrarPendientes(n) {
+  $status.textContent = '⚠ Hay ' + n + (n === 1 ? ' cambio pendiente' : ' cambios pendientes') + ' de sincronización. Se subirán solos cuando haya buena conexión.';
+  $status.className = 'status-line sync';
+  $status.hidden = false;
+}
+
+function mostrarErrorSync() {
+  $status.textContent = '⚠ No se pudo sincronizar con la nube. Revisá la conexión e intentá de nuevo.';
+  $status.className = 'status-line sync';
+  $status.hidden = false;
+}
+
+// Sube la cola de pendientes y después descarga: muestra el estado final.
+// Si queda algo sin subir, NO se toca lo local.
+async function sincronizarYMostrar() {
+  if (!nubeLista()) return;
+  mostrarSincronizando();
+  const ok = await sincronizar();
+  const pendientes = await contarPendientes();
+  if (ok && pendientes === 0) mostrarSincronizado();
+  else if (pendientes > 0) mostrarPendientes(pendientes);
+  else mostrarErrorSync();
+}
+
 function actualizarEstado() {
   if (navigator.onLine) {
     $status.hidden = true;
@@ -725,23 +797,14 @@ function actualizarEstado() {
 // Arranque de la app
 async function iniciar() {
   actualizarEstado();
-
-  if (isOnline()) {
-    mostrarSincronizando();
-    const ok = await sincronizarDesdeNube();
-    if (ok) mostrarSincronizado();
-    else { $status.hidden = true; }
-  }
-
+  await sincronizarYMostrar();
   render();
 }
 
 window.addEventListener('online', async () => {
   actualizarEstado();
-  mostrarSincronizando();
-  const ok = await sincronizarDesdeNube();
-  if (ok) { mostrarSincronizado(); render(); }
-  else { $status.hidden = true; }
+  await sincronizarYMostrar();
+  render();
 });
 window.addEventListener('offline', actualizarEstado);
 

@@ -11,6 +11,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Credenciales locales (nunca subir)
+pwa/supabase-config.js
+
 # Carpetas internas / pruebas (si aparecen)
 _test/
 _chrometmp/

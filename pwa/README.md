@@ -18,7 +18,8 @@ pwa/
 ├── index.html            # Página principal (una sola pantalla con todas las vistas)
 ├── styles.css            # Estilos (paleta verde/azul, botones grandes, alto contraste)
 ├── app.js                # Lógica y navegación de la app
-├── db.js                 # Capa de datos (IndexedDB con Dexie.js)
+├── db.js                 # Capa de datos (IndexedDB + cola de sincronización)
+├── supabase-config.js    # Claves de Supabase (NO se sube al repo, ver .gitignore)
 ├── manifest.json         # Para instalarla como app en Android/escritorio
 ├── service-worker.js     # Cache y funcionamiento 100% offline
 ├── offline.html          # Mensaje de respaldo si no hay conexión
@@ -76,7 +77,8 @@ Después de instalar la app y abrirla una vez conectado, activá el **modo avió
 
 ## 🛠️ Notas técnicas
 
-- **Base de datos:** IndexedDB mediante **Dexie.js** (incrustado localmente, sin dependencias externas). No hay backend, ni login, ni datos que salgan del teléfono.
+- **Base de datos:** IndexedDB mediante **Dexie.js** (archivo local en `vendor/`, sin CDN). Funciona 100% sin internet: la app arranca igual en modo avión.
+- **Sincronización con Supabase (opcional):** si completás `supabase-config.js` con las claves de tu proyecto, los datos se sincronizan entre dispositivos. Cada cambio se registra en una cola local: si no hay señal se guarda igual y se sube solo cuando vuelve la conexión, *antes* de descargar. Nada de lo cargado offline se pierde. Sin configurar, la app anda igual pero solo en este dispositivo.
 - **Fotos:** se guardan como **base64 dentro de la base local**, por eso funcionan sin internet. Cuantas más fotos tomes, más espacio usa el teléfono (es normal).
 - **Service Worker:** guarda todos los archivos en caché al instalarse y los actualiza cuando hay señal.
 - **Diseño:** mobile-first, botones grandes (mínimo 48 px) para usar con guantes o manos sucias, tipografía grande y paleta de verdes y azules (campo y agua) de alto contraste para leer bajo el sol.
