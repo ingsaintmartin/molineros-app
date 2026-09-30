@@ -42,11 +42,10 @@
   </div>
 
   <!-- Scripts: Dexie va LOCAL (vendor/) para que la app arranque sin internet.
-       Supabase es opcional: si el CDN falla o no hay claves, la app
-       sigue funcionando 100% en local. -->
+       Turso es opcional y no necesita SDK: si no hay claves en
+       turso-config.js, la app sigue funcionando 100% en local. -->
   <script src="vendor/dexie.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-config.js"></script>
+  <script src="turso-config.js"></script>
   <script src="db.js"></script>
   <script src="app.js"></script>
 </body>
