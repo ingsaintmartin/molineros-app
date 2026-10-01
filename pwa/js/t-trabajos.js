@@ -184,18 +184,21 @@ Pantallas.trabajos = {
     h += '</div>';
 
     // Mano de obra / viaje / monto manual
-    if ((parseFloat(t.horas) || 0) > 0 || (parseFloat(t.montoManual) || 0) > 0 || (parseFloat(t.km) || 0) > 0) {
+    if ((parseFloat(t.horas) || 0) > 0 || (parseFloat(t.montoManual) || 0) > 0 || (parseFloat(t.km) || 0) > 0 || (parseFloat(t.litros) || 0) > 0) {
       h += '<div class="card"><div class="sec-titulo">🧾 Conceptos</div>';
       if ((parseFloat(t.horas) || 0) > 0) {
         h += '<div class="dato"><span class="k">Mano de obra (' + esc(t.horas) + ' h × ' +
           esc(formatoPeso(t.tarifaHora)) + ')</span><span class="v">' + esc(formatoPeso(tot.manoObra)) + '</span></div>';
       }
-      if ((parseFloat(t.km) || 0) > 0) {
+      if ((parseFloat(t.litros) || 0) > 0 && (parseFloat(t.precioLitro) || 0) > 0) {
+        h += '<div class="dato"><span class="k">Viaje (' + esc(t.km || 0) + ' km · ' + esc(t.litros) + ' l × ' +
+          esc(formatoPeso(t.precioLitro)) + ')</span><span class="v">' + esc(formatoPeso(tot.viaje)) + '</span></div>';
+      } else if ((parseFloat(t.km) || 0) > 0) {
         h += '<div class="dato"><span class="k">Viaje (' + esc(t.km) + ' km × ' +
           esc(formatoPeso(t.costoKm)) + ')</span><span class="v">' + esc(formatoPeso(tot.viaje)) + '</span></div>';
       }
       if ((parseFloat(t.montoManual) || 0) > 0) {
-        h += '<div class="dato"><span class="k">Monto manual</span><span class="v">' +
+        h += '<div class="dato"><span class="k">Monto manual' + (t.presupuestoId ? ' (según presupuesto)' : '') + '</span><span class="v">' +
           esc(formatoPeso(tot.manual)) + '</span></div>';
       }
       h += '</div>';
@@ -388,6 +391,13 @@ Pantallas.trabajos = {
       ), '') +
       campo('text', 'traCostoKm', 'Costo por km', t && t.costoKm !== null && t.costoKm !== undefined ? t.costoKm : getCfg('costoKm', ''),
         { inputmode: 'decimal', placeholder: '$' }) +
+      '<div class="field-row">' +
+      campo('text', 'traLitros', 'Litros de combustible', t && t.litros !== null && t.litros !== undefined ? t.litros : '',
+        { inputmode: 'decimal', placeholder: '0' }) +
+      campo('text', 'traPrecioLitro', '$ por litro', t && t.precioLitro !== null && t.precioLitro !== undefined ? t.precioLitro : '',
+        { inputmode: 'decimal', placeholder: '$' }) +
+      '</div>' +
+      '<p class="hint">Si cargás litros, el viaje se calcula como litros × $/litro (si no, km × costo por km).</p>' +
 
       campo('text', 'traManual', 'Monto manual', t && t.montoManual !== null && t.montoManual !== undefined ? t.montoManual : '',
         { inputmode: 'decimal', placeholder: '$', hint: 'Monto global si no detallás mano de obra ni materiales' }) +
@@ -571,6 +581,8 @@ Pantallas.trabajos = {
       datos.tarifaHora = valNum('traTarifa');
       datos.km = valNum('traKm');
       datos.costoKm = valNum('traCostoKm');
+      datos.litros = valNum('traLitros');
+      datos.precioLitro = valNum('traPrecioLitro');
       datos.montoManual = valNum('traManual');
       datos.observaciones = val('traObs');
       datos.fotos = getFotos('traForm');
