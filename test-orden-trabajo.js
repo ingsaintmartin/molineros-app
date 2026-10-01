@@ -29,15 +29,17 @@ vm.runInContext(fs.readFileSync(path.join(repo, 'pwa/db.js'), 'utf8') +
   '\n;globalThis.__x = { dbLocal, crearFactura, getFactura, getItemsDeFactura,' +
   ' crearTrabajo, actualizarTrabajo, eliminarTrabajo, getTrabajo,' +
   ' crearTrabajoDesdePresupuesto, getTrabajosDePresupuesto,' +
+  ' guardarItemsFactura, eliminarPresupuesto, desvincularTrabajosDePresupuesto,' +
   ' totalesConIVA, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,' +
-  ' COLUMNAS, TURSO_DDL };',
+  ' facturaItemToRow, COLUMNAS, TURSO_DDL };',
   sandbox, { filename: 'db.js' });
 
 const { dbLocal, crearFactura, getFactura, getItemsDeFactura,
   crearTrabajo, actualizarTrabajo, eliminarTrabajo, getTrabajo,
   crearTrabajoDesdePresupuesto, getTrabajosDePresupuesto,
+  guardarItemsFactura, eliminarPresupuesto, desvincularTrabajosDePresupuesto,
   totalesConIVA, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,
-  COLUMNAS, TURSO_DDL } = sandbox.__x;
+  facturaItemToRow, COLUMNAS, TURSO_DDL } = sandbox.__x;
 
 let ok = 0, fail = 0;
 function check(nombre, cond) {
@@ -126,6 +128,31 @@ function check(nombre, cond) {
   const vinc3 = await getTrabajosDePresupuesto(pres.id);
   check('se puede quitar una orden', vinc3.length === 1 && vinc3[0].id === ord1.id);
   check('getTrabajosDePresupuesto vacío para otro id', (await getTrabajosDePresupuesto('nope')).length === 0);
+
+  console.log('— editar ítems del documento —');
+  await guardarItemsFactura(pres.id, [
+    { descripcion: 'Cambiar cueros', cantidad: 1, precioUnit: 35000, iva: 21, trabajoId: null },
+    { descripcion: 'Viaje', cantidad: 1, precioUnit: 15000, iva: 21, trabajoId: 'traX' }
+  ]);
+  const itemsEdit = await getItemsDeFactura(pres.id);
+  check('ítems reemplazados (2)', itemsEdit.length === 2);
+  check('trabajoId se conserva', itemsEdit.some(x => x.trabajoId === 'traX'));
+  check('facturaItemToRow mapea trabajo_id',
+    facturaItemToRow(itemsEdit.find(x => x.trabajoId === 'traX')).trabajo_id === 'traX');
+  const totEdit = totalesConIVA(itemsEdit, 21, false);
+  check('totales recalculados más IVA (neto 50000/iva 10500/total 60500)',
+    totEdit.neto === 50000 && totEdit.iva === 10500 && totEdit.total === 60500);
+
+  console.log('— eliminar presupuesto desvincula órdenes —');
+  const nDesv = await desvincularTrabajosDePresupuesto(pres.id);
+  check('desvincula 1 orden', nDesv === 1);
+  const ordHuerf = await getTrabajo(ord1.id);
+  check('la orden se conserva', !!ordHuerf);
+  check('la orden queda independiente', ordHuerf.presupuestoId === null);
+  await eliminarPresupuesto(pres.id);
+  check('presupuesto eliminado', (await getFactura(pres.id)) === undefined);
+  check('ítems del presupuesto borrados', (await getItemsDeFactura(pres.id)).length === 0);
+  check('la orden sigue existiendo tras eliminar', !!(await getTrabajo(ord1.id)));
 
   await dbLocal.close();
   console.log('\n' + ok + ' ok, ' + fail + ' fallos.');
