@@ -3,50 +3,88 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>MolineroApp - Mis Clientes y Molinos</title>
-  <meta name="description" content="App personal del molinero: clientes, molinos y reparaciones. Funciona sin señal." />
-  <meta name="theme-color" content="#0d631b" />
+  <title>MolineroApp - Gestión del molinero</title>
+  <meta name="description" content="Gestión integral para el oficio de molinería: clientes, aguadas, trabajos, stock, facturación y márgenes. Funciona sin señal." />
+  <meta name="theme-color" content="#0c3b1e" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="MolineroApp" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Fallback a CDN si Leaflet no está vendorizado en este despliegue.
+    // El mapa necesita internet para los mosaicos de todos modos; la app
+    // arranca offline igual (mapa.js ignora la ausencia de L).
+    (function () {
+      function desdeCDN() {
+        if (typeof L !== 'undefined') return;
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(css);
+        var js = document.createElement('script');
+        js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        document.head.appendChild(js);
+      }
+      window.__leafletCDN = desdeCDN;
+      window.addEventListener('load', function () { setTimeout(desdeCDN, 500); });
+    })();
+  </script>
 </head>
 <body>
   <header class="topbar">
-    <button id="btnBack" class="icon-btn back-btn" aria-label="Volver">&#x2190;</button>
+    <button id="btnBack" class="icon-btn" aria-label="Volver" hidden>&#x2190;</button>
     <h1 id="appTitle">MolineroApp</h1>
-    <button id="btnBackup" class="icon-btn" aria-label="Respaldo" title="Exportar respaldo">&#x1F4BE;</button>
+    <button id="btnSync" class="icon-btn" aria-label="Sincronizar" title="Sincronizar">&#x21C5;</button>
   </header>
 
-  <span id="statusLine" class="status-line" hidden></span>
+  <div id="syncBar" class="syncbar" hidden></div>
 
   <main id="view" class="view"></main>
 
-  <!-- Snackbar de avisos -->
+  <nav id="tabbar" class="tabbar" aria-label="Navegación principal">
+    <button class="tab" data-tab="inicio">&#x1F3E0;<span>Inicio</span></button>
+    <button class="tab" data-tab="trabajos">&#x1F527;<span>Trabajos</span></button>
+    <button class="tab" data-tab="clientes">&#x1F465;<span>Clientes</span></button>
+    <button class="tab" data-tab="mapa">&#x1F5FA;<span>Mapa</span></button>
+    <button class="tab" data-tab="mas">&#x22EF;<span>Más</span></button>
+  </nav>
+
   <div id="snackbar" class="snackbar" hidden></div>
 
-  <!-- Ventana de respaldo -->
-  <div id="backupModal" class="modal" hidden>
-    <div class="modal-card">
-      <h2>&#x1F4BE; Respaldo de datos</h2>
-      <p class="modal-sub">Guardá una copia de todos tus clientes, molinos y reparaciones, o restaurá una copia guardada antes.</p>
-      <button id="btnExport" class="btn btn-primary w-full">&#x2B07; Exportar respaldo</button>
-      <button id="btnImportPick" class="btn btn-secondary w-full">&#x21A9;&#xFE0F; Restaurar respaldo</button>
-      <input type="file" id="importFile" accept=".json,application/json" hidden />
-      <button id="btnCloseBackup" class="btn btn-ghost w-full">Cerrar</button>
-    </div>
+  <div id="modal" class="modal" hidden>
+    <div class="modal-card" id="modalCard" role="dialog" aria-modal="true"></div>
   </div>
 
-  <!-- Scripts: Dexie va LOCAL (vendor/) para que la app arranque sin internet.
-       Turso es opcional y no necesita SDK: si no hay claves en
-       turso-config.js, la app sigue funcionando 100% en local. -->
+  <!-- Dexie va LOCAL (vendor/) para arrancar sin internet.
+       Leaflet se intenta local primero y cae a CDN si el despliegue
+       no lo incluye vendorizado (ver fallback en <head>).
+       Turso es opcional y no necesita SDK: sin claves en turso-config.js
+       la app sigue funcionando 100% en local. -->
   <script src="vendor/dexie.min.js"></script>
+  <script src="vendor/leaflet/leaflet.js" onerror="window.__leafletCDN && window.__leafletCDN()"></script>
   <script src="turso-config.js"></script>
   <script src="db.js"></script>
-  <script src="app.js"></script>
+  <script src="js/exif-gps.js"></script>
+  <script src="js/mapa.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/eco.js"></script>
+  <script src="js/seed.js"></script>
+  <script src="js/t-inicio.js"></script>
+  <script src="js/t-trabajos.js"></script>
+  <script src="js/t-clientes.js"></script>
+  <script src="js/t-mapa.js"></script>
+  <script src="js/t-stock.js"></script>
+  <script src="js/t-facturacion.js"></script>
+  <script src="js/t-gastos.js"></script>
+  <script src="js/t-reportes.js"></script>
+  <script src="js/t-mas.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () { iniciar(); });
+  </script>
 </body>
 </html>

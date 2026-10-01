@@ -7,20 +7,38 @@
    3. Cuando no hay señal, sirve lo que tiene en caché.
    ============================================================ */
 
-const CACHE = 'molineroapp-v5';
+const CACHE = 'molineroapp-v7';
 
 // Lista de archivos que se guardan al instalar.
-// IMPORTANTE: Dexie va en vendor/ local (no CDN) para que la app
+// IMPORTANTE: Dexie y Leaflet van en vendor/ local (no CDN) para que la app
 // arranque sin internet. Si un archivo falla, no se rompe toda
 // la instalación (ver el .catch de abajo).
 const ARCHIVOS = [
   './',
   './index.html',
   './styles.css',
-  './app.js',
   './db.js',
   './vendor/dexie.min.js',
+  './vendor/leaflet/leaflet.js',
+  './vendor/leaflet/leaflet.css',
+  './vendor/leaflet/images/marker-icon.png',
+  './vendor/leaflet/images/marker-icon-2x.png',
+  './vendor/leaflet/images/marker-shadow.png',
   './turso-config.js',
+  './js/core.js',
+  './js/eco.js',
+  './js/seed.js',
+  './js/exif-gps.js',
+  './js/mapa.js',
+  './js/t-inicio.js',
+  './js/t-trabajos.js',
+  './js/t-clientes.js',
+  './js/t-mapa.js',
+  './js/t-stock.js',
+  './js/t-facturacion.js',
+  './js/t-gastos.js',
+  './js/t-reportes.js',
+  './js/t-mas.js',
   './manifest.json',
   './offline.html',
   './icons/icon-192.png',
@@ -94,5 +112,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Google Maps (botón "ver en el mapa") puede estar online; no lo cacheamos.
+  // Los tiles de OpenStreetMap van siempre a la red; no se cachean.
 });

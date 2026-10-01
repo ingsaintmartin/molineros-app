@@ -38,7 +38,7 @@
           "value": "no-cache, no-store, must-revalidate"
         }
       ],
-      "source": "/app.js"
+      "source": "/js/(.*)"
     },
     {
       "headers": [
@@ -85,6 +85,5 @@
       ],
       "source": "/icons/(.*)"
     }
-  ],
-  "outputDirectory": "pwa"
+  ]
 }
