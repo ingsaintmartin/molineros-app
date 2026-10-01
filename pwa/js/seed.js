@@ -142,7 +142,7 @@ async function cargarDatosEjemplo() {
   // Vehículo
   await crearVehiculo({
     nombre: 'Camioneta (DEMO)', patente: 'ABC123',
-    kmActual: 125000, costoKm: 900,
+    kmActual: 125000, costoKm: 0, litrosKm: 1,
     observaciones: 'Vehículo de ejemplo'
   });
 
