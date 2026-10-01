@@ -1,0 +1,11 @@
+{
+  "name": "molineroapp",
+  "private": true,
+  "scripts": {
+    "test": "node tests/test-datos.js && node test-empresa-fiscal.js && node test-empresa-ui.js && node test-orden-trabajo.js && node test-guardar-fix.js && node tests/test-flujo.js",
+    "dev": "node scripts/serve-local.cjs"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.5"
+  }
+}

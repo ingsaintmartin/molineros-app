@@ -86,12 +86,12 @@ function normalizarTexto(s) {
 
 /* ---------- Nombres y chips ---------- */
 const ESTADOS_TRABAJO = {
-  a_hacer: 'A hacer', terminado: 'Terminado',
+  a_hacer: 'A hacer', en_curso: 'En curso', pausado: 'Pausado', cancelado: 'Cancelado', terminado: 'Terminado',
   facturado: 'Facturado', cobrado: 'Cobrado'
 };
 const ESTADOS_FACTURA = {
   pendiente: 'Pendiente', aceptado: 'Aceptado', rechazado: 'Rechazado',
-  pagada: 'Cobrada', vencida: 'Vencida', anulada: 'Anulada'
+  pagada: 'Cobrada', parcial: 'Cobro parcial', vencida: 'Vencida', anulada: 'Anulada'
 };
 const TIPOS_INSTALACION = {
   molino: 'Molino', tanque: 'Tanque australiano', bebedero: 'Bebedero',

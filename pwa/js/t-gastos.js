@@ -89,7 +89,13 @@ Pantallas.gastos = {
       campoSelect('gasCategoria', 'Categoría', catOpts, g ? g.categoria : 'varios') +
       campo('text', 'gasDescripcion', 'Descripción', g ? g.descripcion : '', { req: true }) +
       campo('number', 'gasMonto', 'Monto ($)', g ? g.monto : '', { req: true, inputmode: 'decimal' }) +
-      campoSelect('gasTrabajo', 'Trabajo (opcional)', traOpts, g ? (g.trabajoId || '') : '') +
+      campoSelect('gasTrabajo', 'Trabajo (opcional)', traOpts, g ? (g.trabajoId || '') : (params.trabajoId || '')) +
+      campoSelect('gasImputacion', 'Cómo afecta el costo', [
+        { value: 'adicional', texto: 'Costo adicional: sumar al margen' },
+        { value: 'incluido_materiales', texto: 'Ya incluido en los conceptos del trabajo' },
+        { value: 'incluido_vehiculo', texto: 'Ya incluido en el costo por km del vehículo' },
+        { value: 'stock', texto: 'Compra para stock: costo al consumir el repuesto' }
+      ], g ? (g.imputacion || 'adicional') : 'adicional') +
       campoSelect('gasVehiculo', 'Vehículo (opcional)', vehOpts, g ? (g.vehiculoId || '') : '') +
       '<button class="btn btn-ambar" id="gasGuardar">' + (g ? 'Guardar cambios' : 'Guardar gasto') + '</button>';
     if (g) {
@@ -138,6 +144,7 @@ Pantallas.gastos = {
           categoria: val('gasCategoria') || 'varios',
           descripcion: descripcion,
           monto: monto,
+          imputacion: val('gasImputacion') || 'adicional',
           trabajoId: val('gasTrabajo') || null,
           vehiculoId: val('gasVehiculo') || null
         };

@@ -198,7 +198,7 @@ function generarPDF(doc) {
     cmds.push(pdfAscii(') Tj ET\n'));
   };
   tb2('Descripción', xDesc, 10, true);
-  tb2('IVA', xIVA, 10, true);
+  if (!doc.sinIVA) tb2('IVA', xIVA, 10, true);
   tb2('P. unit.', xPU, 10, true);
   tb2('Importe', xImp, 10, true);
   y -= 10 * 1.35;
@@ -214,7 +214,7 @@ function generarPDF(doc) {
     const lineasDesc = pdfEnvolver(it.descripcion || 'Ítem', 44);
     if (y - lineasDesc.length * 13 < MARGEN + 20) nuevaPagina();
     tb2(cantTxt, xCant, 10, false);
-    tb2(ivaTxtDe(it.iva), xIVA, 10, false);
+    if (!doc.sinIVA) tb2(ivaTxtDe(it.iva), xIVA, 10, false);
     tb2(formatoPesoPDF(pu), xPU, 10, false);
     tb2(formatoPesoPDF(cant * pu), xImp, 10, true);
     for (const ld of lineasDesc) {
@@ -227,7 +227,7 @@ function generarPDF(doc) {
   regla();
   espacio(2);
   const esMasIVA = doc.modoIVA && doc.modoIVA.indexOf('más IVA') >= 0;
-  if (doc.neto !== undefined && doc.neto !== null) {
+  if (!doc.sinIVA && doc.neto !== undefined && doc.neto !== null) {
     tb2((esMasIVA ? 'Subtotal:' : 'Neto:') + ' ' + formatoPesoPDF(doc.neto), xPU - 40, 11, false);
     y -= 11 * 1.35;
     tb2('IVA: ' + formatoPesoPDF(doc.iva || 0), xPU - 40, 11, false);
@@ -314,19 +314,22 @@ async function generarDocumentoPDFBlob(id) {
   const f = await getFactura(id);
   if (!f) { snack('Documento no encontrado.'); return null; }
   const items = await getItemsDeFactura(id);
-  const cli = f.clienteId ? await getCliente(f.clienteId) : null;
-  const empresa = await getEmpresa();
+  const cli = (f.flujo && f.flujo.cliente) || (f.clienteId ? await getCliente(f.clienteId) : null);
+  const empresa = Object.assign({}, await getEmpresa(), f.flujo && f.flujo.empresa || {});
   const tipoDoc = nombreTipoDoc(f.tipo) + ((f.tipo === 'factura' && f.letra) ? ' ' + f.letra : '');
   const tot = (f.neto !== null && f.neto !== undefined)
     ? { total: f.total, neto: f.neto, iva: f.ivaMonto || 0 }
     : totalesConIVA(items, 21, f.ivaIncluido !== false);
   const conIVA = f.ivaIncluido !== false;
+  const sinIVA = f.condicionEmisor ? f.condicionEmisor !== 'responsable_inscripto' : f.letra === 'C';
   const blob = generarPDF({
-    titulo: tipoDoc,
+    titulo: f.tipo === 'factura' ? 'LIQUIDACIÓN INTERNA ' + (f.letra || '') : tipoDoc,
+    sinIVA,
+    pie: f.tipo === 'factura' ? 'Documento interno sin validez fiscal. No reemplaza la factura autorizada por ARCA.' : 'Presupuesto / documento interno generado con MolineroApp',
     numero: f.numero || '—',
     fecha: fechaLegible(f.fecha) || '—',
     estado: (typeof ESTADOS_FACTURA !== 'undefined' && ESTADOS_FACTURA[f.estado]) || f.estado || '',
-    modoIVA: conIVA ? 'Precios con IVA incluido' : 'Precios más IVA',
+    modoIVA: sinIVA ? 'Importes finales, sin IVA discriminado' : (conIVA ? 'Precios con IVA incluido' : 'Precios más IVA'),
     empresa: {
       nombre: empresa.nombre, cuit: empresa.cuit,
       condicionFiscal: nombreCondicionFiscal(empresa.condicionFiscal),
@@ -344,7 +347,8 @@ async function generarDocumentoPDFBlob(id) {
       iva: (it.iva === null || it.iva === undefined || it.iva === '') ? null : it.iva
     })),
     neto: tot.neto, iva: tot.iva, total: tot.total,
-    observaciones: f.observaciones || ''
+    observaciones: [f.observaciones, f.flujo && f.flujo.validez ? 'Validez: ' + fechaLegible(f.flujo.validez) : '',
+      f.flujo && f.flujo.condiciones || '', f.flujo && f.flujo.fiscal ? 'Referencia fiscal externa: ' + f.flujo.fiscal.puntoVenta + '-' + f.flujo.fiscal.numero + ' CAE ' + f.flujo.fiscal.cae : ''].filter(Boolean).join('\n')
   });
   const nombreArchivo = (f.tipo || 'documento') + '_' + (f.numero || id) + '.pdf';
   return { blob: blob, nombreArchivo: nombreArchivo, titulo: tipoDoc + ' Nº ' + (f.numero || '') };

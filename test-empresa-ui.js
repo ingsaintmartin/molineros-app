@@ -21,7 +21,7 @@ t('guarda con guardarEmpresa', /guardarEmpresa/.test(empresa));
 t('usa CONDICIONES_FISCALES', /CONDICIONES_FISCALES/.test(empresa));
 
 const index = leer('index.html');
-t('Pestaña inferior Empresa', /data-tab="empresa"/.test(index));
+t('Empresa accesible desde Más', /tab: 'empresa'/.test(leer('js/t-mas.js')));
 t('script t-empresa.js incluido', /js\/t-empresa\.js/.test(index));
 
 const cli = leer('js/t-clientes.js');
@@ -32,7 +32,7 @@ t('cliente detalle muestra cond. fiscal', /nombreCondicionFiscal\(c\.condicionFi
 const fac = leer('js/t-facturacion.js');
 t('factura form: select letra', /facLetra/.test(fac) && /facLetraWrap/.test(fac));
 t('letra visible solo en facturas', /tipoSel\.value === 'factura'/.test(fac));
-t('letra sugerida por empresa', /letraSugerida\(empresa\.condicionFiscal\)/.test(fac));
+t('letra sugerida por emisor y receptor', /determinarLetraFactura\(_facCondicionEmisor, clienteObjeto/.test(fac));
 t('ítem: select IVA', /data-f-iva/.test(fac) && /facIvaOptionsHTML/.test(fac));
 t('ítem lee iva', /parseFloat\(ivaSel\.value\)/.test(fac));
 t('totales Neto/IVA/Total', /facNeto/.test(fac) && /facIva/.test(fac) && /facTotal/.test(fac));
@@ -41,8 +41,8 @@ t('guarda letra/neto/ivaMonto', /datos\.neto = tot\.neto/.test(fac) && /datos\.i
 t('detalle: título con letra', /nombreTipoDoc\(f\.tipo\) \+ \(\(f\.tipo === 'factura' && f\.letra\)/.test(fac));
 t('detalle: discrimina neto/IVA', /totalesConIVA\(items, 21/.test(fac));
 t('lista: letra en la fila', /const letra = \(f\.tipo === 'factura' && f\.letra\)/.test(fac));
-t('pasar a factura: letra sugerida + iva', /letra: letraSugerida\(empresa\.condicionFiscal\)/.test(fac));
-t('pasar a factura: copia iva de ítems', /precioUnit: it\.precioUnit, iva: it\.iva/.test(fac));
+t('facturación continúa desde el trabajo', /Continuar con el trabajo/.test(fac));
+t('desglose conserva IVA de conceptos ejecutados', /iva: it\.iva == null \? 21 : it\.iva/.test(fac));
 t('estados presupuesto: aceptado/rechazado', /'aceptado', 'rechazado'/.test(fac) && /f\.tipo === 'presupuesto'/.test(fac));
 t('detalle: botón Descargar PDF', /data-descargar-pdf/.test(fac) && /descargarDocumentoPDF\(id\)/.test(fac));
 t('form: selector modo IVA (facIvaModo)', /facIvaModo/.test(fac) && /Más IVA/.test(fac));
@@ -51,7 +51,7 @@ t('guarda ivaIncluido + recalcula al editar', /ivaIncluido: facModoIVA\(\)/.test
 t('detalle: muestra modo de precios', /Precios.*Con IVA incluido.*Más IVA/s.test(fac));
 t('aceptado → crearTrabajoDesdePresupuesto', /crearTrabajoDesdePresupuesto\(id\)/.test(fac));
 t('detalle: sección Órdenes de trabajo', /Órdenes de trabajo/.test(fac) && /data-nuevo-trabajo/.test(fac) && /data-ir-trabajo/.test(fac));
-t('pasar a factura: conserva ivaIncluido', /ivaIncluido: f\.ivaIncluido !== false/.test(fac));
+t('desglose conserva modo de precios del trabajo', /ivaIncluido: t\.ivaIncluido !== false/.test(fac));
 
 const pdf = leer('js/pdf.js');
 t('pdf: encabezado empresa', /doc\.empresa/.test(pdf));
@@ -69,7 +69,7 @@ const idx = leer('index.html');
 t('index.html carga t-empresa.js', idx.includes('js/t-empresa.js'));
 
 const sw = leer('service-worker.js');
-t('SW v19', sw.includes('molineroapp-v19'));
+t('SW tiene versión de caché', /molineroapp-v\d+/.test(sw));
 t('SW precachea t-empresa.js', sw.includes("'./js/t-empresa.js'"));
 
 const tra = leer('js/t-trabajos.js');
@@ -96,12 +96,12 @@ t('db: eliminarPresupuesto', /async function eliminarPresupuesto/.test(db));
 const facJs = leer('js/t-facturacion.js');
 t('flujo: botón crear orden en presupuesto aceptado', /data-crear-orden/.test(facJs));
 t('flujo: texto crear orden de trabajo', /Crear orden de trabajo/.test(facJs));
-t('flujo: edición de ítems disponible', /guardarItemsFactura/.test(facJs));
+t('flujo: edición de documento e ítems juntos', /guardarDocumentoConItems/.test(facJs));
 t('flujo: ya no dice "eliminá y creá de nuevo"', !/eliminá y creá de nuevo/.test(facJs));
 t('flujo: aviso de orden existente al editar', /no modifican las órdenes existentes/.test(facJs));
 t('flujo: eliminar presupuesto desvincula', /eliminarPresupuesto/.test(facJs));
-t('flujo: pasar a factura no en rechazado', /f\.estado !== 'rechazado'/.test(facJs));
-t('flujo: trabajoId se conserva en fila', /data-trabajoid/.test(facJs));
+t('flujo: continúa sólo desde presupuesto aceptado', /f\.estado === 'aceptado'/.test(facJs));
+t('flujo: trabajoId se conserva en atributo dataset', /data-trabajo-id/.test(facJs));
 t('flujo: agregar ítem también al editar', /facAddItem/.test(facJs));
 
 const seed = leer('js/seed.js');

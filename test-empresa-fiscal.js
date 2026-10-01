@@ -67,6 +67,9 @@ console.log('== Cálculos de IVA ==');
 console.log('== Fiscales ==');
 {
   t('monotributista → letra C', S('letraSugerida')('monotributista') === 'C');
+  t('RI a monotributista → letra A', S('letraSugerida')('responsable_inscripto', 'monotributista') === 'A');
+  t('RI a RI → letra A', S('letraSugerida')('responsable_inscripto', 'responsable_inscripto') === 'A');
+  t('monotributista a RI → letra C', S('letraSugerida')('monotributista', 'responsable_inscripto') === 'C');
   t('responsable_inscripto → letra B', S('letraSugerida')('responsable_inscripto') === 'B');
   t('nombreCondicionFiscal exento', S('nombreCondicionFiscal')('exento') === 'IVA Exento');
   t('nombreAlicuota 10.5 → 10,5%', S('nombreAlicuota')(10.5) === '10,5%');

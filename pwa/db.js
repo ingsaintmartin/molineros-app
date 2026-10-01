@@ -276,6 +276,9 @@ function trabajoToRow(t) {
     horas: numOVacio(t.horas), tarifa_hora: numOVacio(t.tarifaHora),
     km: numOVacio(t.km), costo_km: numOVacio(t.costoKm),
     litros_km: numOVacio(t.litrosKm), precio_litro: numOVacio(t.precioLitro),
+    vehiculo_id: t.vehiculoId || null, costo_real_km: numOVacio(t.costoRealKm),
+    iva_incluido: t.ivaIncluido === false ? 0 : 1,
+    condicion_emisor: t.condicionEmisor || null,
     monto_manual: numOVacio(t.montoManual),
     estado: t.estado || 'a_hacer', observaciones: t.observaciones || null,
     fotos: JSON.stringify(t.fotos || []),
@@ -292,6 +295,9 @@ function rowToTrabajo(r) {
     horas: r.horas ?? null, tarifaHora: r.tarifa_hora ?? null,
     km: r.km ?? null, costoKm: r.costo_km ?? null,
     litrosKm: r.litros_km ?? null, precioLitro: r.precio_litro ?? null,
+    vehiculoId: r.vehiculo_id || null, costoRealKm: r.costo_real_km ?? null,
+    ivaIncluido: r.iva_incluido !== 0,
+    condicionEmisor: r.condicion_emisor || null,
     montoManual: r.monto_manual ?? null,
     estado: r.estado || 'a_hacer', observaciones: r.observaciones || '',
     fotos: jsonFromDb(r.fotos, []),
@@ -305,6 +311,8 @@ function trabajoItemToRow(it) {
     id: it.id, trabajo_id: it.trabajoId, repuesto_id: it.repuestoId || null,
     descripcion: it.descripcion || '', cantidad: numOVacio(it.cantidad) ?? 1,
     costo_unit: numOVacio(it.costoUnit), precio_unit: numOVacio(it.precioUnit),
+    tipo_concepto: it.tipoConcepto || 'material', iva: numOVacio(it.iva),
+    stock_aplicado: it.stockAplicado === false ? 0 : 1,
     created_at: it.createdAt || Date.now()
   };
 }
@@ -313,6 +321,8 @@ function rowToTrabajoItem(r) {
     id: r.id, trabajoId: r.trabajo_id, repuestoId: r.repuesto_id || null,
     descripcion: r.descripcion || '', cantidad: r.cantidad ?? 1,
     costoUnit: r.costo_unit ?? null, precioUnit: r.precio_unit ?? null,
+    tipoConcepto: r.tipo_concepto || 'material', iva: r.iva ?? null,
+    stockAplicado: r.stock_aplicado !== 0,
     createdAt: r.created_at
   };
 }
@@ -342,6 +352,9 @@ function facturaToRow(f) {
     subtotal: numOVacio(f.subtotal) ?? 0, neto: numOVacio(f.neto),
     iva_monto: numOVacio(f.ivaMonto), total: numOVacio(f.total) ?? 0,
     iva_incluido: f.ivaIncluido === false ? 0 : 1,
+    instalacion_id: f.instalacionId || null,
+    condicion_emisor: f.condicionEmisor || null, cobros: JSON.stringify(f.cobros || []),
+    flujo: JSON.stringify(f.flujo || {}),
     observaciones: f.observaciones || null,
     created_at: f.createdAt || Date.now(), updated_at: f.updatedAt || Date.now()
   };
@@ -353,6 +366,9 @@ function rowToFactura(r) {
     fecha: r.fecha || '', estado: r.estado || 'pendiente',
     subtotal: r.subtotal ?? 0, neto: r.neto ?? null, ivaMonto: r.iva_monto ?? null,
     total: r.total ?? 0, ivaIncluido: r.iva_incluido === 0 ? false : true,
+    instalacionId: r.instalacion_id || null,
+    condicionEmisor: r.condicion_emisor || null, cobros: jsonFromDb(r.cobros, []),
+    flujo: jsonFromDb(r.flujo, {}),
     observaciones: r.observaciones || '',
     createdAt: r.created_at, updatedAt: r.updated_at
   };
@@ -363,6 +379,7 @@ function facturaItemToRow(it) {
     id: it.id, factura_id: it.facturaId, trabajo_id: it.trabajoId || null,
     descripcion: it.descripcion || '', cantidad: numOVacio(it.cantidad) ?? 1,
     precio_unit: numOVacio(it.precioUnit) ?? 0, iva: numOVacio(it.iva),
+    tipo_concepto: it.tipoConcepto || 'material',
     created_at: it.createdAt || Date.now()
   };
 }
@@ -371,6 +388,7 @@ function rowToFacturaItem(r) {
     id: r.id, facturaId: r.factura_id, trabajoId: r.trabajo_id || null,
     descripcion: r.descripcion || '', cantidad: r.cantidad ?? 1,
     precioUnit: r.precio_unit ?? 0, iva: r.iva ?? null, createdAt: r.created_at
+    , tipoConcepto: r.tipo_concepto || 'material'
   };
 }
 
@@ -378,6 +396,7 @@ function gastoToRow(g) {
   return {
     id: g.id, fecha: g.fecha || null, categoria: g.categoria || 'varios',
     descripcion: g.descripcion || '', monto: numOVacio(g.monto) ?? 0,
+    imputacion: g.imputacion || 'adicional',
     trabajo_id: g.trabajoId || null, vehiculo_id: g.vehiculoId || null,
     created_at: g.createdAt || Date.now()
   };
@@ -386,6 +405,7 @@ function rowToGasto(r) {
   return {
     id: r.id, fecha: r.fecha || '', categoria: r.categoria || 'varios',
     descripcion: r.descripcion || '', monto: r.monto ?? 0,
+    imputacion: r.imputacion || 'adicional',
     trabajoId: r.trabajo_id || null, vehiculoId: r.vehiculo_id || null,
     createdAt: r.created_at
   };
@@ -438,10 +458,28 @@ function discriminarIVA(total, alicuota) {
   const neto = Math.round((t / (1 + a / 100)) * 100) / 100;
   return { neto: neto, iva: Math.round((t - neto) * 100) / 100 };
 }
-// Letra de factura sugerida según la condición fiscal de la empresa
-function letraSugerida(condicionEmpresa) {
-  if (condicionEmpresa === 'responsable_inscripto') return 'B';
-  return 'C'; // monotributista / exento → C
+// Letra de factura sugerida según la condición fiscal de la empresa y del cliente (normativa ARCA / AFIP)
+function determinarLetraFactura(condicionEmpresa, condicionCliente) {
+  const emp = condicionEmpresa || 'monotributista';
+  const cli = condicionCliente || 'consumidor_final';
+
+  // Si el emisor es Monotributista o Exento, SIEMPRE emite Factura C
+  if (emp === 'monotributista' || emp === 'exento') {
+    return 'C';
+  }
+  // Si el emisor es Responsable Inscripto:
+  if (emp === 'responsable_inscripto') {
+    // A responsables inscriptos y monotributistas -> Factura A.
+    if (cli === 'responsable_inscripto' || cli === 'monotributista') {
+      return 'A';
+    }
+    // A consumidor final o exento -> Factura B.
+    return 'B';
+  }
+  return 'C';
+}
+function letraSugerida(condicionEmpresa, condicionCliente) {
+  return determinarLetraFactura(condicionEmpresa, condicionCliente);
 }
 // Totales de un conjunto de ítems {cantidad, precioUnit, iva}.
 // ivaIncluido=true (por defecto): el precio ya trae el IVA adentro y se
@@ -497,7 +535,7 @@ function rowToEmpresa(r) {
 // ------------------------------------------------------------------
 async function registrarOperacion(op) {
   await dbLocal.pendientes.add(Object.assign({ createdAt: Date.now() }, op));
-  if (nubeLista()) await subirPendientes();
+  if (nubeLista() && !Dexie.currentTransaction) await subirPendientes();
 }
 
 const COLUMNAS = {
@@ -507,13 +545,13 @@ const COLUMNAS = {
                   'estado', 'observaciones', 'lat', 'lng', 'fotos', 'created_at', 'updated_at'],
   trabajos:      ['id', 'instalacion_id', 'cliente_id', 'fecha', 'descripcion', 'tareas', 'piezas_texto',
                   'horas', 'tarifa_hora', 'km', 'costo_km', 'litros_km', 'precio_litro', 'monto_manual',
-                  'estado', 'observaciones', 'fotos', 'presupuesto_id', 'created_at', 'updated_at'],
-  trabajo_items: ['id', 'trabajo_id', 'repuesto_id', 'descripcion', 'cantidad', 'costo_unit', 'precio_unit', 'created_at'],
+                  'estado', 'observaciones', 'fotos', 'presupuesto_id', 'vehiculo_id', 'costo_real_km', 'iva_incluido', 'condicion_emisor', 'created_at', 'updated_at'],
+  trabajo_items: ['id', 'trabajo_id', 'repuesto_id', 'descripcion', 'cantidad', 'costo_unit', 'precio_unit', 'tipo_concepto', 'iva', 'stock_aplicado', 'created_at'],
   repuestos:     ['id', 'nombre', 'categoria', 'stock', 'stock_min', 'costo', 'precio', 'created_at', 'updated_at'],
   facturas:      ['id', 'cliente_id', 'numero', 'tipo', 'letra', 'fecha', 'estado', 'subtotal', 'neto', 'iva_monto', 'total',
-                  'iva_incluido', 'observaciones', 'created_at', 'updated_at'],
-  factura_items: ['id', 'factura_id', 'trabajo_id', 'descripcion', 'cantidad', 'precio_unit', 'iva', 'created_at'],
-  gastos:        ['id', 'fecha', 'categoria', 'descripcion', 'monto', 'trabajo_id', 'vehiculo_id', 'created_at'],
+                  'iva_incluido', 'instalacion_id', 'condicion_emisor', 'cobros', 'flujo', 'observaciones', 'created_at', 'updated_at'],
+  factura_items: ['id', 'factura_id', 'trabajo_id', 'descripcion', 'cantidad', 'precio_unit', 'iva', 'tipo_concepto', 'created_at'],
+  gastos:        ['id', 'fecha', 'categoria', 'descripcion', 'monto', 'imputacion', 'trabajo_id', 'vehiculo_id', 'created_at'],
   vehiculos:     ['id', 'nombre', 'patente', 'km_actual', 'costo_km', 'litros_km', 'observaciones', 'created_at'],
   empresa:       ['id', 'nombre', 'cuit', 'condicion_fiscal', 'domicilio', 'localidad', 'telefono', 'email',
                   'punto_venta', 'logo', 'created_at', 'updated_at']
@@ -585,6 +623,19 @@ const TURSO_DDL = [
   `ALTER TABLE trabajos ADD COLUMN precio_litro REAL`,
   `ALTER TABLE vehiculos ADD COLUMN litros_km REAL`,
   `ALTER TABLE facturas ADD COLUMN iva_incluido INTEGER`,
+  `ALTER TABLE trabajos ADD COLUMN vehiculo_id TEXT`,
+  `ALTER TABLE trabajos ADD COLUMN costo_real_km REAL`,
+  `ALTER TABLE trabajos ADD COLUMN iva_incluido INTEGER`,
+  `ALTER TABLE trabajos ADD COLUMN condicion_emisor TEXT`,
+  `ALTER TABLE trabajo_items ADD COLUMN tipo_concepto TEXT`,
+  `ALTER TABLE trabajo_items ADD COLUMN iva REAL`,
+  `ALTER TABLE trabajo_items ADD COLUMN stock_aplicado INTEGER`,
+  `ALTER TABLE factura_items ADD COLUMN tipo_concepto TEXT`,
+  `ALTER TABLE facturas ADD COLUMN instalacion_id TEXT`,
+  `ALTER TABLE facturas ADD COLUMN condicion_emisor TEXT`,
+  `ALTER TABLE facturas ADD COLUMN cobros TEXT`,
+  `ALTER TABLE facturas ADD COLUMN flujo TEXT`,
+  `ALTER TABLE gastos ADD COLUMN imputacion TEXT`,
   `CREATE INDEX IF NOT EXISTS idx_ins_cliente ON instalaciones(cliente_id)`,
   `CREATE INDEX IF NOT EXISTS idx_ins_est ON instalaciones(establecimiento_id)`,
   `CREATE INDEX IF NOT EXISTS idx_est_cli ON establecimientos(cliente_id)`,
@@ -749,7 +800,7 @@ function nombreMes(iso) {
 // Ingresos = mano de obra + repuestos (precio) + traslado/viáticos + monto manual
 // Costos   = repuestos (costo) + costo real del vehículo (km × vehiculo.costoKm)
 // Margen   = ingresos − costos
-function totalesTrabajo(t, items, vehiculo) {
+function totalesTrabajo(t, items, vehiculo, gastos) {
   items = items || [];
   let matCosto = 0, matPrecio = 0;
   for (const it of items) {
@@ -757,27 +808,37 @@ function totalesTrabajo(t, items, vehiculo) {
     matCosto  += c * (parseFloat(it.costoUnit)  || 0);
     matPrecio += c * (parseFloat(it.precioUnit) || 0);
   }
-  const manoObra = (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
+  const manoObra = items.some(it => it.tipoConcepto === 'servicio') ? 0 :
+    (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
   // Viaje (viáticos cobrados): km × litros de gasoil por km × $ por litro (o km × tarifa por km).
   const km = parseFloat(t.km) || 0;
   const litrosKm = parseFloat(t.litrosKm) || 0;
   const precioLitro = parseFloat(t.precioLitro) || 0;
-  const viajeCobrado = (litrosKm > 0 && precioLitro > 0)
+  const viajeCobrado = items.some(it => it.tipoConcepto === 'traslado') ? 0 : (litrosKm > 0 && precioLitro > 0)
     ? km * litrosKm * precioLitro
     : km * (parseFloat(t.costoKm) || 0);
   const manual   = parseFloat(t.montoManual) || 0;
 
   // Costo real del vehículo (mantenimiento/combustible): si hay vehículo cargado
-  const viajeCosto = (vehiculo && parseFloat(vehiculo.costoKm))
-    ? km * (parseFloat(vehiculo.costoKm) || 0)
+  const costoRealKm = numOVacio(t.costoRealKm) ?? (vehiculo ? numOVacio(vehiculo.costoKm) : null);
+  const viajeCosto = costoRealKm !== null
+    ? km * costoRealKm
     : 0;
 
-  const ingresos = manoObra + matPrecio + viajeCobrado + manual;
-  const costos   = matCosto + viajeCosto;
+  const esRI = t.condicionEmisor === 'responsable_inscripto';
+  const conceptosVenta = items.map(it => ({ cantidad: it.cantidad, precioUnit: it.precioUnit,
+    iva: esRI ? (it.iva == null ? 21 : it.iva) : 0 })).concat([
+    { cantidad: 1, precioUnit: manoObra + viajeCobrado + manual, iva: esRI ? 21 : 0 }
+  ]);
+  const venta = totalesConIVA(conceptosVenta, esRI ? 21 : 0, t.ivaIncluido);
+  const ingresos = venta.neto;
+  const gastosDirectos = (gastos || []).filter(g => !g.imputacion || g.imputacion === 'adicional')
+    .reduce((s, g) => s + (Number(g.monto) || 0), 0);
+  const costos   = matCosto + viajeCosto + gastosDirectos;
   return {
     materialesCosto: matCosto, materialesPrecio: matPrecio,
-    manoObra: manoObra, viaje: viajeCobrado, viajeCosto: viajeCosto, manual: manual,
-    ingresos: ingresos, costos: costos, margen: ingresos - costos,
+    manoObra: manoObra, viaje: viajeCobrado, viajeCosto: viajeCosto, manual: manual, gastosDirectos,
+    ingresos: ingresos, totalVenta: venta.total, costos: costos, margen: ingresos - costos,
     margenPct: ingresos > 0 ? (ingresos - costos) / ingresos * 100 : 0
   };
 }
@@ -1003,6 +1064,17 @@ async function actualizarTrabajo(datos) {
   return datos;
 }
 
+// Trabajo, materiales, stock y cola se confirman juntos; un error no deja una orden a medias.
+async function guardarTrabajoConItems(datos, items) {
+  let trabajo;
+  await dbLocal.transaction('rw', dbLocal.trabajos, dbLocal.trabajo_items, dbLocal.repuestos, dbLocal.pendientes, async () => {
+    trabajo = datos.id ? await actualizarTrabajo(datos) : await crearTrabajo(datos);
+    await guardarItemsTrabajo(trabajo.id, items);
+  });
+  if (nubeLista()) await subirPendientes();
+  return trabajo;
+}
+
 // Órdenes de trabajo vinculadas a un presupuesto (presupuesto_id no es índice)
 async function getTrabajosDePresupuesto(presupuestoId) {
   if (!presupuestoId) return [];
@@ -1027,15 +1099,29 @@ async function crearTrabajoDesdePresupuesto(presId) {
   const tot = totalesConIVA(items || [], 21, f.ivaIncluido !== false);
   const t = await crearTrabajo({
     clienteId: f.clienteId || null,
-    instalacionId: null,
+    instalacionId: f.instalacionId || null,
+    ivaIncluido: f.ivaIncluido !== false,
+    condicionEmisor: f.condicionEmisor || null,
     fecha: hoyISO(),
     descripcion: 'Orden de trabajo · Presupuesto Nº ' + (f.numero || ''),
     tareas: tareas,
-    montoManual: tot.total || null,
+    montoManual: (items && items.length) ? null : (tot.total || null),
     estado: 'a_hacer',
     observaciones: (f.observaciones || ''),
     presupuestoId: presId
   });
+
+  if (items && items.length) {
+    await guardarItemsTrabajo(t.id, items.map(it => ({
+      descripcion: it.descripcion || '',
+      cantidad: parseFloat(it.cantidad) || 1,
+      costoUnit: null,
+      precioUnit: parseFloat(it.precioUnit) || 0,
+      tipoConcepto: it.tipoConcepto || 'material', iva: it.iva,
+      repuestoId: null
+    })));
+  }
+
   return t;
 }
 
@@ -1043,13 +1129,13 @@ async function eliminarTrabajo(trabajoId) {
   const ahora = Date.now();
   const ops = [];
   await dbLocal.transaction('rw',
-    dbLocal.trabajos, dbLocal.trabajo_items, dbLocal.gastos, dbLocal.factura_items,
+    dbLocal.trabajos, dbLocal.trabajo_items, dbLocal.gastos, dbLocal.factura_items, dbLocal.repuestos,
     async () => {
       // Al borrar un trabajo, el stock usado vuelve al inventario
       const items = await dbLocal.trabajo_items.where('trabajoId').equals(trabajoId).toArray();
       for (const it of items) {
         ops.push({ tipo: 'delete', tabla: 'trabajo_items', id: it.id, createdAt: ahora });
-        if (it.repuestoId) {
+        if (it.repuestoId && it.stockAplicado !== false) {
           const rep = await dbLocal.repuestos.get(it.repuestoId);
           if (rep) {
             rep.stock = (parseFloat(rep.stock) || 0) + (parseFloat(it.cantidad) || 0);
@@ -1084,11 +1170,14 @@ async function eliminarTrabajo(trabajoId) {
 async function guardarItemsTrabajo(trabajoId, items) {
   const ahora = Date.now();
   const ops = [];
-  await dbLocal.transaction('rw', dbLocal.trabajo_items, dbLocal.repuestos, async () => {
+  await dbLocal.transaction('rw', dbLocal.trabajo_items, dbLocal.repuestos, dbLocal.trabajos, dbLocal.pendientes, async () => {
+    const trabajo = await getTrabajo(trabajoId);
+    if (!trabajo) throw new Error('El trabajo no existe.');
+    const consumir = ['en_curso', 'terminado', 'facturado', 'cobrado'].includes(trabajo.estado);
     const anteriores = await dbLocal.trabajo_items.where('trabajoId').equals(trabajoId).toArray();
     // Devolver stock de los ítems anteriores
     for (const it of anteriores) {
-      if (it.repuestoId) {
+      if (it.repuestoId && it.stockAplicado !== false) {
         const rep = await dbLocal.repuestos.get(it.repuestoId);
         if (rep) {
           rep.stock = (parseFloat(rep.stock) || 0) + (parseFloat(it.cantidad) || 0);
@@ -1109,13 +1198,16 @@ async function guardarItemsTrabajo(trabajoId, items) {
         repuestoId: it.repuestoId || null,
         descripcion: it.descripcion || '',
         cantidad: cant, costoUnit: numOVacio(it.costoUnit),
-        precioUnit: numOVacio(it.precioUnit), createdAt: ahora
+        precioUnit: numOVacio(it.precioUnit), createdAt: ahora,
+        tipoConcepto: it.tipoConcepto || 'material', iva: numOVacio(it.iva),
+        stockAplicado: consumir || it.stockAplicado === true
       };
       await dbLocal.trabajo_items.add(nuevo);
       ops.push({ tipo: 'upsert', tabla: 'trabajo_items', row: trabajoItemToRow(nuevo), createdAt: ahora });
-      if (nuevo.repuestoId) {
+      if (nuevo.repuestoId && nuevo.stockAplicado) {
         const rep = await dbLocal.repuestos.get(nuevo.repuestoId);
         if (rep) {
+          if ((Number(rep.stock) || 0) < cant) throw new Error('Stock insuficiente de ' + rep.nombre + '. Registrá el ingreso antes de consumirlo.');
           rep.stock = (parseFloat(rep.stock) || 0) - cant;
           rep.updatedAt = ahora;
           await dbLocal.repuestos.put(rep);
@@ -1123,9 +1215,21 @@ async function guardarItemsTrabajo(trabajoId, items) {
         }
       }
     }
+    if (ops.length) await dbLocal.pendientes.bulkAdd(ops);
   });
-  if (ops.length) await dbLocal.pendientes.bulkAdd(ops);
-  if (nubeLista()) await subirPendientes();
+  if (nubeLista() && !Dexie.currentTransaction) await subirPendientes();
+}
+
+async function reservasDeStock() {
+  const [items, trabajos] = await Promise.all([dbLocal.trabajo_items.toArray(), getTrabajos()]);
+  const activos = new Set(trabajos.filter(t => t.estado !== 'cancelado').map(t => t.id));
+  const reservas = {};
+  for (const it of items) {
+    if (it.repuestoId && it.stockAplicado === false && activos.has(it.trabajoId)) {
+      reservas[it.repuestoId] = (reservas[it.repuestoId] || 0) + (Number(it.cantidad) || 0);
+    }
+  }
+  return reservas;
 }
 
 async function getTrabajo(id) { return dbLocal.trabajos.get(id); }
@@ -1199,13 +1303,27 @@ async function proximoNumero(tipo) {
 }
 
 async function crearFactura(datos, items) {
+  const empresa = await getEmpresa();
+  const cliente = datos.clienteId ? await getCliente(datos.clienteId) : null;
+  datos = Object.assign({}, datos, { condicionEmisor: empresa.condicionFiscal || 'monotributista' });
+  const { logo, ...datosEmpresa } = empresa;
+  datos.flujo = Object.assign({}, datos.flujo, { empresa: datosEmpresa, cliente: cliente || {} });
+  if (datos.tipo === 'factura') datos.letra = determinarLetraFactura(datos.condicionEmisor, cliente && cliente.condicionFiscal);
+  items = (items || []).map(it => Object.assign({}, it, {
+    iva: datos.condicionEmisor === 'responsable_inscripto' ? it.iva : 0
+  }));
+  const tot = totalesConIVA(items, datos.condicionEmisor === 'responsable_inscripto' ? 21 : 0, datos.ivaIncluido);
+  Object.assign(datos, { subtotal: tot.total, neto: tot.neto, ivaMonto: tot.iva, total: tot.total });
   const ahora = Date.now();
   const f = Object.assign({}, datos, {
-    id: genId('fac'), numero: datos.numero || await proximoNumero(datos.tipo || 'factura'),
+    id: genId('fac'), numero: datos.numero || '',
     createdAt: ahora, updatedAt: ahora
   });
   const ops = [{ tipo: 'upsert', tabla: 'facturas', row: facturaToRow(f), createdAt: ahora }];
-  await dbLocal.transaction('rw', dbLocal.facturas, dbLocal.factura_items, async () => {
+  await dbLocal.transaction('rw', dbLocal.facturas, dbLocal.factura_items, dbLocal.trabajos, dbLocal.pendientes, async () => {
+    if (f.tipo === 'factura') await validarTrabajosFacturables(f, items);
+    f.numero = datos.numero || await proximoNumero(datos.tipo || 'factura');
+    ops[0].row = facturaToRow(f);
     await dbLocal.facturas.add(f);
     for (const it of items || []) {
       const nuevo = {
@@ -1213,13 +1331,14 @@ async function crearFactura(datos, items) {
         descripcion: it.descripcion || '', cantidad: parseFloat(it.cantidad) || 1,
         precioUnit: numOVacio(it.precioUnit) ?? 0,
         iva: it.iva === undefined || it.iva === null || it.iva === '' ? null : parseFloat(it.iva),
+        tipoConcepto: it.tipoConcepto || 'material',
         createdAt: ahora
       };
       await dbLocal.factura_items.add(nuevo);
       ops.push({ tipo: 'upsert', tabla: 'factura_items', row: facturaItemToRow(nuevo), createdAt: ahora });
     }
+    await dbLocal.pendientes.bulkAdd(ops);
   });
-  await dbLocal.pendientes.bulkAdd(ops);
   if (nubeLista()) await subirPendientes();
   return f;
 }
@@ -1231,12 +1350,32 @@ async function actualizarFactura(datos) {
   return datos;
 }
 
+async function guardarDocumentoConItems(datos, items) {
+  await dbLocal.transaction('rw', dbLocal.facturas, dbLocal.factura_items, dbLocal.trabajos, dbLocal.pendientes, async () => {
+    const anterior = await getFactura(datos.id);
+    if (!anterior || anterior.tipo !== datos.tipo) throw new Error('No se puede cambiar el tipo de un documento guardado.');
+    if ((anterior.cobros || []).length || (anterior.flujo && (anterior.flujo.fiscal || anterior.flujo.facturaOrigen))) {
+      throw new Error('El documento tiene cobros o referencia fiscal y debe conservarse.');
+    }
+    const conceptos = items.map(it => Object.assign({}, it, { iva: datos.condicionEmisor === 'responsable_inscripto' ? it.iva : 0 }));
+    if (datos.tipo === 'factura') await validarTrabajosFacturables(datos, conceptos);
+    const tot = totalesConIVA(conceptos, datos.condicionEmisor === 'responsable_inscripto' ? 21 : 0, datos.ivaIncluido);
+    Object.assign(datos, { subtotal: tot.total, neto: tot.neto, ivaMonto: tot.iva, total: tot.total });
+    await guardarItemsFactura(datos.id, conceptos);
+    await actualizarFactura(datos);
+  });
+  if (nubeLista()) await subirPendientes();
+  return datos;
+}
+
 // Reemplaza los ítems de un documento (al editar): borra los anteriores y
 // guarda los nuevos, con sus operaciones de sincronización.
 async function guardarItemsFactura(facturaId, items) {
   const ahora = Date.now();
   const ops = [];
-  await dbLocal.transaction('rw', dbLocal.factura_items, async () => {
+  await dbLocal.transaction('rw', dbLocal.factura_items, dbLocal.facturas, dbLocal.trabajos, async () => {
+    const documento = await getFactura(facturaId);
+    if (documento && documento.tipo === 'factura') await validarTrabajosFacturables(documento, items);
     const anteriores = await dbLocal.factura_items.where('facturaId').equals(facturaId).toArray();
     for (const x of anteriores) ops.push({ tipo: 'delete', tabla: 'factura_items', id: x.id, createdAt: ahora });
     await dbLocal.factura_items.where('facturaId').equals(facturaId).delete();
@@ -1246,6 +1385,7 @@ async function guardarItemsFactura(facturaId, items) {
         descripcion: it.descripcion || '', cantidad: parseFloat(it.cantidad) || 1,
         precioUnit: numOVacio(it.precioUnit) ?? 0,
         iva: it.iva === undefined || it.iva === null || it.iva === '' ? null : parseFloat(it.iva),
+        tipoConcepto: it.tipoConcepto || 'material',
         createdAt: ahora
       };
       await dbLocal.factura_items.add(nuevo);
@@ -1253,7 +1393,7 @@ async function guardarItemsFactura(facturaId, items) {
     }
   });
   await dbLocal.pendientes.bulkAdd(ops);
-  if (nubeLista()) await subirPendientes();
+  if (nubeLista() && !Dexie.currentTransaction) await subirPendientes();
 }
 
 // Desvincula las órdenes de trabajo de un presupuesto (quedan como trabajos
@@ -1273,6 +1413,8 @@ async function eliminarPresupuesto(id) {
 }
 
 async function eliminarFactura(id) {
+  const documento = await getFactura(id);
+  if (documento && ((documento.cobros || []).length || (documento.flujo && (documento.flujo.fiscal || documento.flujo.facturaOrigen)))) throw new Error('El documento tiene cobros o referencia fiscal y debe conservarse.');
   const ahora = Date.now();
   const ops = [];
   await dbLocal.transaction('rw', dbLocal.facturas, dbLocal.factura_items, async () => {
@@ -1294,6 +1436,69 @@ async function getFacturas() {
 async function getFactura(id) { return dbLocal.facturas.get(id); }
 async function getItemsDeFactura(facturaId) {
   return dbLocal.factura_items.where('facturaId').equals(facturaId).toArray();
+}
+
+function saldoDocumento(f) {
+  if (f.estado === 'anulada') return 0;
+  const movimientos = f.cobros || [];
+  if (f.estado === 'pagada' && !movimientos.length) return 0; // documentos anteriores
+  const cobrado = movimientos.reduce((s, c) => s + (Number(c.monto) || 0), 0);
+  return Math.max(0, Math.round(((Number(f.total) || 0) - cobrado) * 100) / 100);
+}
+
+// Sólo las facturas activas ocupan un trabajo. Presupuestos y recibos no lo facturan.
+function trabajosFacturados(facturas, items, excluirId) {
+  const activos = new Set(facturas.filter(f => f.tipo === 'factura' &&
+    f.estado !== 'anulada' && f.id !== excluirId).map(f => f.id));
+  return new Set(items.filter(it => it.trabajoId && activos.has(it.facturaId)).map(it => it.trabajoId));
+}
+
+async function validarTrabajosFacturables(f, items) {
+  const ocupados = trabajosFacturados(await getFacturas(), await dbLocal.factura_items.toArray(), f.id);
+  for (const id of new Set((items || []).map(it => it.trabajoId).filter(Boolean))) {
+    const trabajo = await getTrabajo(id);
+    if (!trabajo || trabajo.clienteId !== f.clienteId) throw new Error('El trabajo no pertenece al cliente elegido.');
+    if (ocupados.has(id)) throw new Error('El trabajo ya está incluido en otra factura.');
+    if (!['terminado', 'facturado', 'cobrado'].includes(trabajo.estado)) {
+      throw new Error('Terminá el trabajo antes de facturarlo.');
+    }
+  }
+}
+
+async function registrarCobro(facturaId, datos) {
+  let resultado;
+  await dbLocal.transaction('rw', dbLocal.facturas, dbLocal.factura_items, dbLocal.pendientes, async () => {
+    const f = await getFactura(facturaId);
+    if (!f || f.tipo !== 'factura' || f.estado === 'anulada') throw new Error('Elegí una factura activa.');
+    const monto = Math.round(Number(datos.monto) * 100) / 100;
+    if (!Number.isFinite(monto) || monto <= 0 || monto > saldoDocumento(f)) {
+      throw new Error('El cobro debe ser mayor que cero y no superar el saldo pendiente.');
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(datos.fecha || '')) throw new Error('Ingresá la fecha del cobro.');
+    const cobro = { id: genId('cob'), fecha: datos.fecha,
+      monto, medio: datos.medio || 'efectivo', referencia: datos.referencia || '' };
+    f.cobros = (f.cobros || []).concat(cobro);
+    f.estado = saldoDocumento(f) === 0 ? 'pagada' : 'parcial';
+    f.updatedAt = Date.now();
+    await dbLocal.facturas.put(f);
+    await dbLocal.pendientes.add({ tipo: 'upsert', tabla: 'facturas', row: facturaToRow(f), createdAt: f.updatedAt });
+    const recibo = { id: genId('fac'), tipo: 'recibo', numero: await proximoNumero('recibo'),
+      clienteId: f.clienteId, fecha: cobro.fecha, estado: 'pagada', total: monto, subtotal: monto, neto: monto,
+      ivaMonto: 0, ivaIncluido: true, condicionEmisor: f.condicionEmisor,
+      flujo: { facturaOrigen: f.id, cobroId: cobro.id, medio: cobro.medio, referencia: cobro.referencia,
+        empresa: f.flujo && f.flujo.empresa, cliente: f.flujo && f.flujo.cliente }, createdAt: f.updatedAt, updatedAt: f.updatedAt };
+    const itemRecibo = { id: genId('fit'), facturaId: recibo.id, descripcion: 'Cobro de liquidación Nº ' + f.numero,
+      cantidad: 1, precioUnit: monto, iva: 0, tipoConcepto: 'servicio', createdAt: f.updatedAt };
+    await dbLocal.facturas.add(recibo);
+    await dbLocal.factura_items.add(itemRecibo);
+    await dbLocal.pendientes.bulkAdd([
+      { tipo: 'upsert', tabla: 'facturas', row: facturaToRow(recibo), createdAt: f.updatedAt },
+      { tipo: 'upsert', tabla: 'factura_items', row: facturaItemToRow(itemRecibo), createdAt: f.updatedAt }
+    ]);
+    resultado = f;
+  });
+  if (nubeLista()) await subirPendientes();
+  return resultado;
 }
 async function getFacturasDeCliente(clienteId) {
   const lista = await dbLocal.facturas.where('clienteId').equals(clienteId).toArray();

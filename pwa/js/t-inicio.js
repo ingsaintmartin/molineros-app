@@ -12,7 +12,7 @@ Pantallas.inicio = {
       .filter(x => x.t.estado === 'a_hacer')
       .sort((a, b) => String(a.t.fecha).localeCompare(String(b.t.fecha)))
       .slice(0, 5);
-    const sinFacturar = conTot.filter(x => x.t.estado === 'terminado').length;
+    const sinFacturar = porCobrar.detalle.filter(x => x.tipo === 'trabajo').length;
     const stockBajo = repuestos.filter(r => (parseFloat(r.stock) || 0) <= (parseFloat(r.stockMin) || 0)).length;
 
     const nombreCli = {};
@@ -33,9 +33,12 @@ Pantallas.inicio = {
       '<div class="stat ambar"><div class="etiqueta">Por cobrar</div>' +
       '<div class="valor chico">' + esc(formatoPeso(porCobrar.total) || '$ 0') + '</div></div>' +
       '<div class="stat azul"><div class="etiqueta">Trabajos pendientes</div>' +
-      '<div class="valor">' + pendientes.length + '</div></div></div>';
+      '<div class="valor">' + conTot.filter(x => ['a_hacer', 'en_curso', 'pausado'].includes(x.t.estado)).length + '</div></div></div>';
 
     h += '<button class="btn btn-ambar" data-go-trabajo-nuevo>🔧 ＋ Nuevo trabajo</button>';
+    h += '<button class="btn" data-ir="presupuestos">📝 Nuevo presupuesto / pendientes</button>' +
+      '<button class="btn" data-ir="facturacion">🧾 Facturas y cobros</button>' +
+      '<div class="dato"><span class="k">Pendiente de facturar</span><span class="v">' + esc(formatoPeso(porCobrar.pendienteFacturar)) + '</span></div>';
 
     if (stockBajo > 0 || sinFacturar > 0) {
       h += '<div class="card"><div class="sec-titulo">⚠️ Atención</div>';

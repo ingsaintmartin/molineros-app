@@ -27,13 +27,19 @@ async function itemsPorTrabajo() {
 
 // Trabajos con sus ítems y totales calculados
 async function trabajosConTotales() {
-  const [trabajos, mapaItems, vehiculos] = await Promise.all([getTrabajos(), itemsPorTrabajo(), getVehiculos()]);
+  const [trabajos, mapaItems, vehiculos, gastos, facturas, facturaItems] = await Promise.all([
+    getTrabajos(), itemsPorTrabajo(), getVehiculos(), getGastos(), getFacturas(), dbLocal.factura_items.toArray()
+  ]);
   const vehMap = {};
   for (const v of vehiculos) vehMap[v.id] = v;
   return trabajos.map(t => {
     const items = mapaItems[t.id] || [];
     const veh = vehMap[t.vehiculoId] || null;
-    return { t: t, items: items, tot: totalesTrabajo(t, items, veh) };
+    const idsDocumentos = new Set(facturaItems.filter(it => it.trabajoId === t.id).map(it => it.facturaId));
+    const documentos = facturas.filter(f => idsDocumentos.has(f.id) && f.tipo === 'factura' && f.estado !== 'anulada');
+    const saldo = documentos.reduce((s, f) => s + saldoDocumento(f), 0);
+    return { t, items, tot: totalesTrabajo(t, items, veh, gastos.filter(g => g.trabajoId === t.id)),
+      documentos, facturado: documentos.length > 0, cobrado: documentos.length > 0 && saldo === 0, saldo };
   });
 }
 
@@ -43,12 +49,12 @@ async function resumenMes(yyyyMM) {
   let ingresos = 0, costos = 0, nTrabajos = 0;
   for (const { t, tot } of conTot) {
     if (!enMes(t.fecha, yyyyMM)) continue;
-    if (t.estado === 'a_hacer') continue;
+    if (!['terminado', 'facturado', 'cobrado'].includes(t.estado)) continue;
     ingresos += tot.ingresos; costos += tot.costos; nTrabajos++;
   }
   let gastosMes = 0;
   for (const g of gastos) {
-    if (enMes(g.fecha, yyyyMM)) gastosMes += parseFloat(g.monto) || 0;
+    if (enMes(g.fecha, yyyyMM) && !g.trabajoId && (!g.imputacion || g.imputacion === 'adicional')) gastosMes += parseFloat(g.monto) || 0;
   }
   const margenBruto = ingresos - costos;
   return {
@@ -59,21 +65,22 @@ async function resumenMes(yyyyMM) {
 
 // Plata por cobrar: facturas pendientes + trabajos terminados sin facturar
 async function calcularPorCobrar() {
-  const [facturas, conTot] = await Promise.all([getFacturas(), trabajosConTotales()]);
+  const [facturas, conTot, items] = await Promise.all([getFacturas(), trabajosConTotales(), dbLocal.factura_items.toArray()]);
+  const facturados = trabajosFacturados(facturas, items);
   let total = 0;
+  let pendienteFacturar = 0;
   const detalle = [];
   for (const f of facturas) {
-    if ((f.tipo === 'factura' || f.tipo === 'recibo') &&
-        (f.estado === 'pendiente' || f.estado === 'vencida')) {
-      total += parseFloat(f.total) || 0;
-      detalle.push({ tipo: 'factura', id: f.id, texto: (f.tipo === 'recibo' ? 'Recibo' : 'Factura') + ' Nº ' + f.numero, monto: parseFloat(f.total) || 0 });
+    if (f.tipo === 'factura' && saldoDocumento(f) > 0) {
+      total += saldoDocumento(f);
+      detalle.push({ tipo: 'factura', id: f.id, texto: 'Factura Nº ' + f.numero, monto: saldoDocumento(f) });
     }
   }
   for (const { t, tot } of conTot) {
-    if (t.estado === 'terminado' && tot.ingresos > 0) {
-      total += tot.ingresos;
-      detalle.push({ tipo: 'trabajo', id: t.id, texto: 'Trabajo ' + fechaLegible(t.fecha), monto: tot.ingresos });
+    if (['terminado', 'facturado', 'cobrado'].includes(t.estado) && !facturados.has(t.id) && tot.ingresos > 0) {
+      pendienteFacturar += tot.totalVenta;
+      detalle.push({ tipo: 'trabajo', id: t.id, texto: 'Trabajo ' + fechaLegible(t.fecha), monto: tot.totalVenta });
     }
   }
-  return { total, detalle };
+  return { total, pendienteFacturar, detalle };
 }

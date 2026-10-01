@@ -22,6 +22,6 @@ Pantallas.presupuestos = {
     const vista = params.vista || 'lista';
     if (vista === 'lista')   facListaBind('presupuesto');
     if (vista === 'detalle') facDetalleBind(params.id);
-    if (vista === 'form')    facFormBind(params);
+    if (vista === 'form')    await facFormBind(params);
   }
 };

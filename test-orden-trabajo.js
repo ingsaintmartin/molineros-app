@@ -49,6 +49,7 @@ function check(nombre, cond) {
 
 (async () => {
   await dbLocal.open();
+  await dbLocal.empresa.put({ id: 'empresa', condicionFiscal: 'responsable_inscripto' });
 
   console.log('— totalesConIVA con/sin IVA incluido —');
   const items = [
@@ -103,7 +104,9 @@ function check(nombre, cond) {
   check('orden hereda tareas de los ítems',
     Array.isArray(ord1.tareas) && ord1.tareas.length === 1 && /Cambiar cueros/.test(ord1.tareas[0]));
   check('orden nace a_hacer', ord1.estado === 'a_hacer');
-  check('orden hereda el monto del presupuesto', ord1.montoManual === 42350);
+  check('orden no duplica el precio en monto manual', ord1.montoManual === null);
+  const itemsOrden = await dbLocal.trabajo_items.where('trabajoId').equals(ord1.id).toArray();
+  check('orden hereda conceptos y modo más IVA', itemsOrden.length === 1 && itemsOrden[0].precioUnit === 35000 && ord1.ivaIncluido === false);
 
   const ord2 = await crearTrabajoDesdePresupuesto(pres.id);
   check('idempotente: no duplica', ord2.id === ord1.id);
@@ -116,8 +119,8 @@ function check(nombre, cond) {
   const tv2 = totalesTrabajo({ km: 60, costoKm: 250 }, []);
   check('viaje = km × costoKm si no hay l/km (60×250=15000)', tv2.viaje === 15000);
   const tv3 = totalesTrabajo({ km: 60, litrosKm: 1, precioLitro: 2500, montoManual: 42350 }, []);
-  check('ingresos incluyen monto manual heredado', tv3.ingresos === 42350);
-  check('costos incluyen el viaje', tv3.costos === 150000);
+  check('ingresos incluyen viaje cobrado y monto manual', tv3.ingresos === 192350);
+  check('sin vehículo no inventa un costo real', tv3.costos === 0);
   const rowC = trabajoToRow({ id: 'x', litrosKm: 1, precioLitro: 2500 });
   check('trabajoToRow mapea litros_km/precio_litro',
     rowC.litros_km === 1 && rowC.precio_litro === 2500);

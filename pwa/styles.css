@@ -397,3 +397,4 @@ button.fila:active { background: var(--v50); }
   .modal { align-items: center; padding: 20px; }
   .modal-card { border-radius: 20px; }
 }
+:root [hidden] { display: none !important; }

@@ -1,6 +1,8 @@
 # MolineroApp 🌀💧
 
-Aplicación web (PWA) **100% gratuita, offline-first y lista para producción**, para uso personal de un molinero de la provincia de Buenos Aires.
+Aplicación web (PWA) para gestionar el oficio de molinero en la provincia de Buenos Aires, con datos locales y sincronización opcional.
+
+El circuito actualizado de presupuesto, trabajo, liquidación, factura fiscal externa y cobros se documenta en [Flujo de trabajo](../docs/FLUJO.md). Para trabajar en local, ejecutar `npm ci`, `npm test` y `npm run dev` desde la raíz del repositorio. El servidor local deshabilita la sincronización de nube durante las pruebas.
 
 Permite llevar en el teléfono:
 1. **Clientes** (productores / campos)

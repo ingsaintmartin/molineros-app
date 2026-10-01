@@ -19,7 +19,7 @@ Pantallas.reportes = {
       '<input type="month" id="repMes" value="' + esc(mes) + '" /></div></div>';
 
     h += '<div class="stats">' +
-      '<div class="stat"><div class="etiqueta">Facturado</div>' +
+      '<div class="stat"><div class="etiqueta">Precio de trabajos terminados</div>' +
       '<div class="valor chico">' + esc(formatoPeso(res.ingresos)) + '</div></div>' +
       '<div class="stat"><div class="etiqueta">Margen bruto</div>' +
       '<div class="valor chico ' + brutoClase + '">' + esc(formatoPeso(res.margenBruto)) + '</div></div>' +
@@ -59,7 +59,7 @@ Pantallas.reportes = {
     const porCli = {};
     for (const x of conTot) {
       if (!enMes(x.t.fecha, mes)) continue;
-      if (x.t.estado === 'a_hacer') continue;
+      if (!['terminado', 'facturado', 'cobrado'].includes(x.t.estado)) continue;
       const k = x.t.clienteId || 'sin';
       if (!porCli[k]) porCli[k] = { ing: 0, mar: 0 };
       porCli[k].ing += x.tot.ingresos;

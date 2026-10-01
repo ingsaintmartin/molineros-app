@@ -34,7 +34,7 @@ Pantallas.trabajos = {
   async renderLista() {
     const h = '<input class="buscador" id="traBuscar" type="search" placeholder="🔍 Buscar por trabajo, cliente o instalación…" />' +
       '<div class="chips" id="traChips">' +
-      [['','Todos'],['a_hacer','A hacer'],['terminado','Terminado'],
+      [['','Todos'],['a_hacer','A hacer'],['en_curso','En curso'],['pausado','Pausado'],['terminado','Terminado'],
        ['facturado','Facturado'],['cobrado','Cobrado'],['por_cobrar','Por cobrar']]
         .map((c, i) => '<button type="button" class="fchip' + (i === 0 ? ' activo' : '') + '"' +
           ' data-filtro="' + c[0] + '">' + esc(c[1]) + '</button>').join('') +
@@ -63,7 +63,11 @@ Pantallas.trabajos = {
       const filas = conTot.filter(x => {
         const t = x.t;
         if (filtro === 'por_cobrar') {
-          if (!(t.estado === 'facturado' || t.estado === 'terminado')) return false;
+          if (!x.facturado || x.saldo <= 0) return false;
+        } else if (filtro === 'facturado') {
+          if (!x.facturado) return false;
+        } else if (filtro === 'cobrado') {
+          if (!x.cobrado) return false;
         } else if (filtro && t.estado !== filtro) {
           return false;
         }
@@ -89,7 +93,7 @@ Pantallas.trabajos = {
           '<div class="avatar">🔧</div><div class="cuerpo">' +
           '<div class="titulo">' + esc(t.descripcion || 'Trabajo') + '</div>' +
           '<div class="bajada">' + esc(bajada) + '</div></div>' +
-          '<div class="lateral">' + chipEstado(t.estado) +
+          '<div class="lateral">' + chipEstado(t.estado) + (x.facturado ? chipEstado(x.cobrado ? 'cobrado' : 'facturado') : '') +
           (x.tot.ingresos > 0
             ? '<div class="valor chico" style="margin-top:4px">' + esc(formatoPeso(x.tot.ingresos)) + '</div>'
             : '') +
@@ -130,7 +134,7 @@ Pantallas.trabajos = {
       t.presupuestoId ? getFactura(t.presupuestoId) : null,
       t.vehiculoId ? getVehiculo(t.vehiculoId) : null
     ]);
-    const tot = totalesTrabajo(t, items, vehiculo);
+    const tot = totalesTrabajo(t, items, vehiculo, gastos);
     const tareas = (t.tareas || []).map(normTarea);
     const fotos = (t.fotos || []).map(fotoSegura).filter(Boolean);
 
@@ -170,7 +174,7 @@ Pantallas.trabajos = {
     h += '</div>';
 
     // Materiales
-    h += '<div class="card"><div class="sec-titulo">🔩 Materiales</div>';
+    h += '<div class="card"><div class="sec-titulo">🔩 Conceptos del trabajo</div>';
     if (!items.length) {
       h += '<div class="hint">Sin materiales.</div>';
     } else {
@@ -209,17 +213,17 @@ Pantallas.trabajos = {
     const neg = tot.margen < 0;
     h += '<div class="card"><div class="sec-titulo">💰 Totales</div>' +
       '<table class="eco">' +
-      '<tr><td>Materiales (cobrado)</td><td class="num">' + esc(formatoPeso(tot.materialesPrecio)) + '</td></tr>' +
+      '<tr><td>Conceptos detallados (precio)</td><td class="num">' + esc(formatoPeso(tot.materialesPrecio)) + '</td></tr>' +
       '<tr><td>Mano de obra</td><td class="num">' + esc(formatoPeso(tot.manoObra)) + '</td></tr>' +
       (tot.viaje > 0 ? '<tr><td>Traslado / Viáticos (cobrado)</td><td class="num">' + esc(formatoPeso(tot.viaje)) + '</td></tr>' : '') +
       (tot.manual > 0
         ? '<tr><td>Monto manual</td><td class="num">' + esc(formatoPeso(tot.manual)) + '</td></tr>' : '') +
       '<tr class="total"><td>Ingresos totales</td><td class="num">' + esc(formatoPeso(tot.ingresos)) + '</td></tr>' +
-      '<tr><td>Costos (materiales + vehículo)</td><td class="num">' + esc(formatoPeso(tot.costos)) + '</td></tr>' +
+      '<tr><td>Costos (conceptos + vehículo + gastos directos)</td><td class="num">' + esc(formatoPeso(tot.costos)) + '</td></tr>' +
       '<tr class="margen' + (neg ? ' negativo' : '') + '"><td>Margen (' +
       esc((neg ? '−' : '') + Math.abs(tot.margenPct).toFixed(0) + ' %') + ')</td>' +
       '<td class="num">' + esc(formatoPeso(tot.margen)) + '</td></tr>' +
-      '</table></div>';
+      '</table>' + (items.some(it => it.costoUnit == null) ? '<p class="hint">Margen estimado: hay conceptos sin costo interno cargado.</p>' : '') + '</div>';
 
     // Observaciones
     if (t.observaciones) {
@@ -253,7 +257,8 @@ Pantallas.trabajos = {
     h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 20px">' +
       '<button class="btn btn-secondary" id="traEditar">✏️ Editar</button>' +
       '<button class="btn btn-ghost" id="traEstado">🔄 Cambiar estado</button>' +
-      '<button class="btn btn-ambar" id="traFacturar">🧾 Facturar</button>' +
+      '<button class="btn btn-ghost" id="traAgregarGasto">＋ Gasto de este trabajo</button>' +
+      '<button class="btn btn-ambar" id="traFacturar">🧾 Revisar liquidación</button>' +
       '<button class="btn btn-danger" id="traEliminar" style="margin-left:auto">🗑️ Eliminar</button>' +
       '</div>';
 
@@ -291,6 +296,8 @@ Pantallas.trabajos = {
     });
 
     const editar = document.getElementById('traEditar');
+    const agregarGasto = document.getElementById('traAgregarGasto');
+    if (agregarGasto) agregarGasto.onclick = () => go('gastos', { vista: 'form', trabajoId: id });
     if (editar) editar.onclick = () => go('trabajos', { vista: 'form', id: id });
 
     const estado = document.getElementById('traEstado');
@@ -300,7 +307,7 @@ Pantallas.trabajos = {
           '<h2>Cambiar estado</h2>' +
           '<p class="modal-sub">¿En qué estado queda el trabajo?</p>' +
           '<div style="display:flex;flex-direction:column;gap:8px">' +
-          Object.keys(ESTADOS_TRABAJO).map(k =>
+          ['a_hacer', 'en_curso', 'pausado', 'terminado', 'cancelado'].map(k =>
             '<button class="btn ' + (k === t.estado ? 'btn-primary' : 'btn-ghost') + '"' +
             ' data-est="' + k + '">' + esc(ESTADOS_TRABAJO[k]) + '</button>'
           ).join('') +
@@ -310,7 +317,8 @@ Pantallas.trabajos = {
         document.querySelectorAll('[data-est]').forEach(b => {
           b.onclick = async () => {
             t.estado = b.dataset.est;
-            await actualizarTrabajo(t);
+            try { await guardarTrabajoConItems(t, await getItemsDeTrabajo(id)); }
+            catch (e) { snack(e.message); return; }
             cerrarModal();
             go('trabajos', { vista: 'detalle', id: id }, true);
           };
@@ -321,7 +329,18 @@ Pantallas.trabajos = {
     }
 
     const facturar = document.getElementById('traFacturar');
-    if (facturar) facturar.onclick = () => go('facturacion', { vista: 'form', trabajoId: id });
+    if (facturar) facturar.onclick = async () => {
+      const facturas = await getFacturas();
+      const items = await dbLocal.factura_items.toArray();
+      const ocupados = trabajosFacturados(facturas, items);
+      if (ocupados.has(id)) {
+        const ids = new Set(items.filter(it => it.trabajoId === id).map(it => it.facturaId));
+        const f = facturas.find(f => ids.has(f.id) && f.tipo === 'factura' && f.estado !== 'anulada');
+        go('facturacion', { vista: 'detalle', id: f.id }); return;
+      }
+      if (!['terminado', 'facturado', 'cobrado'].includes(t.estado)) { snack('Terminá el trabajo antes de liquidarlo.'); return; }
+      go('facturacion', { vista: 'form', trabajoId: id });
+    };
 
     const eliminar = document.getElementById('traEliminar');
     if (eliminar) {
@@ -344,8 +363,8 @@ Pantallas.trabajos = {
     params = params || {};
     const t = params.id ? await getTrabajo(params.id) : null;
     const items = params.id ? await getItemsDeTrabajo(params.id) : [];
-    const [clientes, repuestos, vehiculos] = await Promise.all([
-      getClientes(), getRepuestos(), getVehiculos()
+    const [clientes, repuestos, vehiculos, empresa] = await Promise.all([
+      getClientes(), getRepuestos(), getVehiculos(), getEmpresa()
     ]);
     // Orden vinculada a un presupuesto: precarga el cliente y guarda el vínculo
     const presId = t ? (t.presupuestoId || '') : (params.presupuestoId || '');
@@ -364,8 +383,8 @@ Pantallas.trabajos = {
       '<div class="field-row">' +
       campo('date', 'traFecha', 'Fecha', t ? (t.fecha || hoyISO()) : hoyISO()) +
       campoSelect('traEstado', 'Estado',
-        Object.keys(ESTADOS_TRABAJO).map(k => ({ value: k, texto: ESTADOS_TRABAJO[k] })),
-        t ? t.estado : 'a_hacer') +
+        ['a_hacer', 'en_curso', 'pausado', 'terminado', 'cancelado'].map(k => ({ value: k, texto: ESTADOS_TRABAJO[k] })),
+        t ? (['facturado', 'cobrado'].includes(t.estado) ? 'terminado' : t.estado) : 'a_hacer') +
       '</div>' +
       campo('text', 'traDescripcion', 'Descripción', t ? t.descripcion : '',
         { req: true, placeholder: 'Ej.: Cambio de aletas y cueros del molino' }) +
@@ -379,17 +398,18 @@ Pantallas.trabajos = {
       '<button type="button" class="btn btn-ghost" id="addMat">＋ Agregar material</button>' +
 
       '<div class="seccion-titulo"><h3>🧾 Mano de obra y viaje</h3></div>' +
+      '<p class="hint">Si ya detallaste un servicio o un traslado en los conceptos, no se cobra otra vez por estas horas o kilómetros. Cargá cualquier adicional como un concepto nuevo.</p>' +
       '<div class="field-row">' +
       campo('text', 'traHoras', 'Horas', t && t.horas !== null && t.horas !== undefined ? t.horas : '',
         { inputmode: 'decimal', placeholder: '0' }) +
       campo('text', 'traTarifa', 'Tarifa por hora', t && t.tarifaHora !== null && t.tarifaHora !== undefined ? t.tarifaHora : getCfg('tarifaHora', ''),
         { inputmode: 'decimal', placeholder: '$' }) +
       '</div>' +
-      campo('text', 'traKm', 'Kilómetros (solo ida)', t && t.km !== null && t.km !== undefined ? t.km : '',
+      campo('text', 'traKm', 'Kilómetros totales (ida y vuelta)', t && t.km !== null && t.km !== undefined ? t.km : '',
         { inputmode: 'decimal', placeholder: '0' }) +
       campoSelect('traVehiculo', 'Vehículo', [{ value: '', texto: 'Sin vehículo' }].concat(
         vehiculos.map(v => ({ value: v.id, texto: v.nombre + (v.patente ? ' · ' + v.patente : '') }))
-      ), '') +
+      ), t ? (t.vehiculoId || '') : '') +
       '<div class="field-row">' +
       campo('text', 'traLitrosKm', 'Litros de gasoil por km', t && t.litrosKm !== null && t.litrosKm !== undefined ? t.litrosKm : '',
         { inputmode: 'decimal', placeholder: '1' }) +
@@ -398,8 +418,10 @@ Pantallas.trabajos = {
       '</div>' +
       '<p class="hint">Viáticos = km × litros por km × $ por litro. Ej: 60 km × 1 l/km × $2.500.</p>' +
 
-      campo('text', 'traManual', 'Monto manual', t && t.montoManual !== null && t.montoManual !== undefined ? t.montoManual : '',
-        { inputmode: 'decimal', placeholder: '$', hint: 'Monto global si no detallás mano de obra ni materiales' }) +
+      campo('text', 'traManual', 'Importe adicional / global', t && t.montoManual !== null && t.montoManual !== undefined ? t.montoManual : '',
+        { inputmode: 'decimal', placeholder: '$', hint: 'Se suma a los conceptos detallados. Para un precio global, dejá los demás precios vacíos.' }) +
+      '<div' + ((t && t.condicionEmisor || empresa.condicionFiscal) !== 'responsable_inscripto' ? ' hidden' : '') + '>' +
+      campoSelect('traIvaModo', 'Precios del trabajo', [{ value: '1', texto: 'Importes finales' }, { value: '0', texto: 'Precios netos, más IVA' }], t && t.ivaIncluido === false ? '0' : '1') + '</div>' +
       campoTexto('traObs', 'Observaciones', t ? t.observaciones : '') +
 
       '<div class="seccion-titulo"><h3>📷 Fotos</h3></div>' +
@@ -435,7 +457,7 @@ Pantallas.trabajos = {
         .concat(inss.map(i => ({ value: i.id, texto: i.nombre || 'Instalación' })));
       insWrap.innerHTML = campoSelect('traInstalacion', 'Instalación', opts, elegido || '');
     };
-    const clienteInicial = t ? t.clienteId : (params.clienteId || '');
+    const clienteInicial = t ? t.clienteId : (params.clienteId || val('traCliente'));
     const insInicial = t ? (t.instalacionId || '') : (params.instalacionId || '');
     await pintarInstalaciones(clienteInicial, insInicial);
     if (selCli) selCli.onchange = () => pintarInstalaciones(selCli.value, '');
@@ -483,7 +505,9 @@ Pantallas.trabajos = {
     const matRow = (m) => {
       m = m || {};
       const esLibre = !m.repuestoId;
-      return '<div class="item-dinamico" data-mat>' +
+      return '<div class="item-dinamico" data-mat data-stock-aplicado="' + (m.repuestoId && m.stockAplicado !== false ? '1' : '0') + '" data-concepto="' + esc(m.tipoConcepto || 'material') + '" data-iva="' + esc(m.iva == null ? 21 : m.iva) + '">' +
+        '<div class="field"><label>Tipo de concepto</label><select data-mat-tipo>' +
+        Object.keys(TIPOS_CONCEPTO).map(k => '<option value="' + k + '"' + (k === (m.tipoConcepto || 'material') ? ' selected' : '') + '>' + TIPOS_CONCEPTO[k] + '</option>').join('') + '</select></div>' +
         '<div class="field"><label>Repuesto</label><select data-mat-rep>' +
         '<option value="">Material libre…</option>' + opcionesRepuestos() + '</select></div>' +
         '<div class="field" data-mat-desc-wrap' + (esLibre ? '' : ' hidden') + '>' +
@@ -561,6 +585,9 @@ Pantallas.trabajos = {
         const costoStr = fila.querySelector('[data-mat-costo]').value.replace(',', '.').trim();
         const precioStr = fila.querySelector('[data-mat-precio]').value.replace(',', '.').trim();
         mats.push({
+          tipoConcepto: fila.querySelector('[data-mat-tipo]').value,
+          stockAplicado: fila.dataset.stockAplicado === '1',
+          iva: Number(fila.dataset.iva),
           repuestoId: repId,
           descripcion: descripcionIt,
           cantidad: cantidad,
@@ -581,21 +608,26 @@ Pantallas.trabajos = {
       datos.km = valNum('traKm');
       datos.litrosKm = valNum('traLitrosKm');
       datos.precioLitro = valNum('traPrecioLitro');
+      datos.vehiculoId = val('traVehiculo') || null;
+      const veh = vehPorId[datos.vehiculoId];
+      datos.costoRealKm = t && t.vehiculoId === datos.vehiculoId && t.costoRealKm != null
+        ? t.costoRealKm : (veh ? Number(veh.costoKm) || 0 : null);
+      datos.ivaIncluido = val('traIvaModo') !== '0';
+      datos.condicionEmisor = (t && t.condicionEmisor) || (await getEmpresa()).condicionFiscal;
+      if (datos.condicionEmisor !== 'responsable_inscripto') datos.ivaIncluido = true;
       datos.costoKm = (t && t.costoKm) || null;
       datos.montoManual = valNum('traManual');
       datos.observaciones = val('traObs');
       datos.fotos = getFotos('traForm');
       datos.presupuestoId = val('traPresupuestoId') || (t && t.presupuestoId) || null;
 
+      const guardar = e.target.querySelector('[type="submit"]');
+      if (guardar.disabled) return;
+      guardar.disabled = true;
       let id;
-      if (t) {
-        await actualizarTrabajo(datos);
-        id = t.id;
-      } else {
-        const nuevo = await crearTrabajo(datos);
-        id = nuevo.id;
-      }
-      await guardarItemsTrabajo(id, mats);
+      try { id = (await guardarTrabajoConItems(datos, mats)).id; }
+      catch (err) { snack(err.message); return; }
+      finally { guardar.disabled = false; }
       snack('Trabajo guardado.');
       go('trabajos', { vista: 'detalle', id: id });
     });

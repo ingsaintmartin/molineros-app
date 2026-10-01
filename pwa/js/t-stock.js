@@ -34,6 +34,7 @@ function pctStock(stock, min) {
 /* ---------- LISTA ---------- */
 async function stockListaHTML() {
   const reps = await getRepuestos();
+  const reservas = await reservasDeStock();
   const catsConStock = [];
   for (const c of CATEGORIAS_REPUESTO) {
     if (reps.some(r => r.categoria === c)) catsConStock.push(c);
@@ -60,6 +61,7 @@ async function stockListaHTML() {
       '<div class="stock-track"><div class="stock-fill ' + clase + '" style="width:' + pctStock(stock, min) + '%"></div></div>' +
       '</div><div class="lateral">' +
       '<div>Stock: <b>' + esc(fmtCant(stock)) + '</b></div>' +
+      '<div class="bajada">Reservado ' + esc(fmtCant(reservas[r.id] || 0)) + ' · disponible ' + esc(fmtCant(stock - (reservas[r.id] || 0))) + '</div>' +
       '<div class="bajada">mín ' + esc(fmtCant(min)) + '</div>' +
       (bajo ? '<span class="chip fuera">BAJO</span>' : '') +
       '</div></button>';

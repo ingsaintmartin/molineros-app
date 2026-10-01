@@ -28,26 +28,23 @@ const ETIQUETAS_CAR = (function () {
 })();
 
 function facturaEsPendiente(f) {
-  return (f.tipo === 'factura' || f.tipo === 'recibo') &&
-         (f.estado === 'pendiente' || f.estado === 'vencida');
+  return f.tipo === 'factura' && saldoDocumento(f) > 0;
 }
 
 // Cuenta corriente de un cliente: facturas pendientes + trabajos
 // terminados sin facturar (excluye los ya incluidos en una factura).
 async function cuentaDeCliente(clienteId) {
   const [facturas, conTot, fis] = await Promise.all([
-    getFacturasDeCliente(clienteId),
+    getFacturas(),
     trabajosConTotales(),
     dbLocal.factura_items.toArray()
   ]);
-  const facturadoTrab = {};
-  for (const it of fis) if (it.trabajoId) facturadoTrab[it.trabajoId] = true;
-  const facPend = facturas.filter(facturaEsPendiente);
+  const facturadoTrab = trabajosFacturados(facturas, fis);
+  const facPend = facturas.filter(f => f.clienteId === clienteId && facturaEsPendiente(f));
   const trabSinFac = conTot.filter(x =>
     x.t.clienteId === clienteId && x.t.estado === 'terminado' &&
-    !facturadoTrab[x.t.id] && x.tot.ingresos > 0);
-  const total = facPend.reduce((s, f) => s + (parseFloat(f.total) || 0), 0) +
-                trabSinFac.reduce((s, x) => s + x.tot.ingresos, 0);
+    !facturadoTrab.has(x.t.id) && x.tot.ingresos > 0);
+  const total = facPend.reduce((s, f) => s + saldoDocumento(f), 0);
   return { facPend, trabSinFac, total };
 }
 
@@ -57,17 +54,12 @@ async function datosListaClientes() {
     getClientes(), getFacturas(), trabajosConTotales(),
     getInstalaciones(), dbLocal.factura_items.toArray()
   ]);
-  const facturadoTrab = {};
-  for (const it of fis) if (it.trabajoId) facturadoTrab[it.trabajoId] = true;
+  const facturadoTrab = trabajosFacturados(facturas, fis);
   return clientes.map(c => {
     const nIns = instalaciones.filter(i => i.clienteId === c.id).length;
     let debe = 0;
     for (const f of facturas) {
-      if (f.clienteId === c.id && facturaEsPendiente(f)) debe += parseFloat(f.total) || 0;
-    }
-    for (const x of conTot) {
-      if (x.t.clienteId === c.id && x.t.estado === 'terminado' &&
-          !facturadoTrab[x.t.id] && x.tot.ingresos > 0) debe += x.tot.ingresos;
+      if (f.clienteId === c.id && facturaEsPendiente(f)) debe += saldoDocumento(f);
     }
     return { c, nIns, debe };
   });
@@ -204,11 +196,11 @@ async function renderClienteDetalle(id) {
     for (const f of cuenta.facPend) {
       const tipo = f.tipo === 'recibo' ? 'Recibo' : 'Factura';
       h += '<div class="dato"><span class="k">' + esc(tipo) + ' Nº ' + esc(f.numero) + '</span>' +
-        '<span class="v">' + esc(formatoPeso(f.total)) + '</span></div>';
+        '<span class="v">' + esc(formatoPeso(saldoDocumento(f))) + '</span></div>';
     }
     for (const x of cuenta.trabSinFac) {
-      h += '<div class="dato"><span class="k">Trabajo ' + esc(fechaLegible(x.t.fecha)) + '</span>' +
-        '<span class="v">' + esc(formatoPeso(x.tot.ingresos)) + '</span></div>';
+      h += '<div class="dato"><span class="k">Pendiente de facturar · ' + esc(fechaLegible(x.t.fecha)) + '</span>' +
+        '<span class="v">' + esc(formatoPeso(x.tot.totalVenta)) + '</span></div>';
     }
     h += '<div class="dato"><span class="k">Total por cobrar</span>' +
       '<span class="v">' + esc(formatoPeso(cuenta.total)) + '</span></div>';
@@ -216,12 +208,15 @@ async function renderClienteDetalle(id) {
   h += '</div>';
 
   h += '<button class="btn btn-primary" id="cli-nuevo-trabajo">＋ Nuevo trabajo</button>';
+  h += '<button class="btn" id="cli-nuevo-presupuesto">＋ Nuevo presupuesto</button>';
   h += '<div class="btn-row"><button class="btn btn-secondary" id="cli-editar">✏️ Editar cliente</button>' +
     '<button class="btn btn-outline-danger" id="cli-eliminar">🗑️ Eliminar</button></div>';
   return h;
 }
 
 function bindClienteDetalle(id) {
+  const presupuesto = document.getElementById('cli-nuevo-presupuesto');
+  if (presupuesto) presupuesto.onclick = () => go('presupuestos', { vista: 'form', clienteId: id });
   document.querySelectorAll('[data-ver-instalacion]').forEach(b => {
     b.onclick = () => go('clientes', { vista: 'instalacion', id: b.dataset.verInstalacion });
   });

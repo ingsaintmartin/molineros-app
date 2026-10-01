@@ -7,6 +7,8 @@ Pantallas.mas = {
 
   async render() {
     const accesos = [
+      { ico: '🏢', t: 'Mi empresa', b: 'Datos fiscales y configuración del emisor', tab: 'empresa' },
+      { ico: '🗺️', t: 'Mapa', b: 'Ubicación de molinos y aguadas', tab: 'mapa' },
       { ico: '📦', t: 'Stock', b: 'Repuestos y materiales', tab: 'stock' },
       { ico: '🧾', t: 'Facturación', b: 'Presupuestos, facturas y recibos', tab: 'facturacion' },
       { ico: '💸', t: 'Gastos', b: 'Combustible, peajes, ayudante…', tab: 'gastos' },

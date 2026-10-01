@@ -110,6 +110,8 @@ test('COLUMNAS cubre todas las tablas de sync y coincide con los mapeos', () => 
     ['factura_items', facturaItemToRow({ id: 'x', facturaId: 'y', createdAt: 1 })],
     ['gastos', gastoToRow({ id: 'x', createdAt: 1 })],
     ['vehiculos', vehiculoToRow({ id: 'x', createdAt: 1 })]
+    , ['establecimientos', establecimientoToRow({ id: 'x', createdAt: 1 })]
+    , ['empresa', empresaToRow({ id: 'empresa', createdAt: 1, updatedAt: 1 })]
   ];
   for (const [tabla, row] of pares) {
     assert.ok(COLUMNAS[tabla], 'falta COLUMNAS.' + tabla);
@@ -118,10 +120,10 @@ test('COLUMNAS cubre todas las tablas de sync y coincide con los mapeos', () => 
         tabla + ': la columna ' + k + ' del mapeo no está en COLUMNAS');
     }
   }
-  assert.strictEqual(TABLAS_SYNC.length, 9);
+  assert.deepStrictEqual(TABLAS_SYNC.slice().sort(), pares.map(p => p[0]).sort());
 });
 
-test('TURSO_DDL crea las 9 tablas (IF NOT EXISTS)', () => {
+test('TURSO_DDL crea todas las tablas sincronizadas (IF NOT EXISTS)', () => {
   for (const t of TABLAS_SYNC) {
     const hay = TURSO_DDL.some(s =>
       new RegExp('CREATE TABLE IF NOT EXISTS ' + t + '\\b').test(s));
@@ -162,15 +164,15 @@ test('totalesTrabajo: ingresos, costos y margen', () => {
     { cantidad: 2, costoUnit: 8000, precioUnit: 12000 },
     { cantidad: 1, costoUnit: 5000, precioUnit: 9000 }
   ];
-  const r = totalesTrabajo(t, items);
+  const r = totalesTrabajo(t, items, { costoKm: 450 });
   assert.strictEqual(r.manoObra, 45000);
   assert.strictEqual(r.viaje, 36000);
   assert.strictEqual(r.materialesPrecio, 33000);
   assert.strictEqual(r.materialesCosto, 21000);
-  assert.strictEqual(r.ingresos, 78000);
+  assert.strictEqual(r.ingresos, 114000);
   assert.strictEqual(r.costos, 57000);
-  assert.strictEqual(r.margen, 21000);
-  assert.ok(Math.abs(r.margenPct - 26.92) < 0.01);
+  assert.strictEqual(r.margen, 57000);
+  assert.strictEqual(r.margenPct, 50);
 });
 
 test('totalesTrabajo con monto manual y sin datos', () => {
