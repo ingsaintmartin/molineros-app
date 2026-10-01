@@ -375,14 +375,14 @@ async function sincronizarAhora() {
 
 /* ---------- Arranque ---------- */
 async function sembrarDemoSiCorresponde() {
-  // Si la base está vacía, carga los datos de ejemplo una sola vez por
-  // equipo. Así quien abre el link por primera vez ve la app completa
-  // sin tocar nada. La sincronización previa ya bajó lo de la nube, así
-  // que si otro equipo sembró antes, acá no se duplica.
+  // Si todavía no hay datos de ejemplo en este equipo, los carga una sola
+  // vez. Así quien abre el link por primera vez ve la app completa sin
+  // tocar nada. La sincronización previa ya bajó lo de la nube, así que
+  // si otro equipo sembró antes, acá no se duplica.
   try {
     if (localStorage.getItem('demoAutoV1')) return;
     const clientes = await getClientes();
-    if (clientes.length > 0) return;
+    if (clientes.some(c => (c.nombre || '').includes('(DEMO)'))) return;
     const creado = await cargarDatosEjemplo();
     if (creado) {
       try { localStorage.setItem('demoAutoV1', '1'); } catch (e) {}
