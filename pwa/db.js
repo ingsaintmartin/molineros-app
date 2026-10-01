@@ -746,10 +746,10 @@ function nombreMes(iso) {
 // ------------------------------------------------------------------
 // Cálculos económicos (funciones puras, las usa la interfaz)
 // ------------------------------------------------------------------
-// Ingresos = mano de obra + repuestos (precio) + monto manual
-// Costos   = repuestos (costo) + viaje (km × costo/km)
+// Ingresos = mano de obra + repuestos (precio) + traslado/viáticos + monto manual
+// Costos   = repuestos (costo) + costo real del vehículo (km × vehiculo.costoKm)
 // Margen   = ingresos − costos
-function totalesTrabajo(t, items) {
+function totalesTrabajo(t, items, vehiculo) {
   items = items || [];
   let matCosto = 0, matPrecio = 0;
   for (const it of items) {
@@ -758,20 +758,25 @@ function totalesTrabajo(t, items) {
     matPrecio += c * (parseFloat(it.precioUnit) || 0);
   }
   const manoObra = (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
-  // Viaje (viáticos): km × litros de gasoil por km × $ por litro (solo ida).
-  // Si no hay litros/km cargados, se usa el costo por km directo (compatibilidad).
+  // Viaje (viáticos cobrados): km × litros de gasoil por km × $ por litro (o km × tarifa por km).
   const km = parseFloat(t.km) || 0;
   const litrosKm = parseFloat(t.litrosKm) || 0;
   const precioLitro = parseFloat(t.precioLitro) || 0;
-  const viaje = (litrosKm > 0 && precioLitro > 0)
+  const viajeCobrado = (litrosKm > 0 && precioLitro > 0)
     ? km * litrosKm * precioLitro
     : km * (parseFloat(t.costoKm) || 0);
   const manual   = parseFloat(t.montoManual) || 0;
-  const ingresos = manoObra + matPrecio + manual;
-  const costos   = matCosto + viaje;
+
+  // Costo real del vehículo (mantenimiento/combustible): si hay vehículo cargado
+  const viajeCosto = (vehiculo && parseFloat(vehiculo.costoKm))
+    ? km * (parseFloat(vehiculo.costoKm) || 0)
+    : 0;
+
+  const ingresos = manoObra + matPrecio + viajeCobrado + manual;
+  const costos   = matCosto + viajeCosto;
   return {
     materialesCosto: matCosto, materialesPrecio: matPrecio,
-    manoObra: manoObra, viaje: viaje, manual: manual,
+    manoObra: manoObra, viaje: viajeCobrado, viajeCosto: viajeCosto, manual: manual,
     ingresos: ingresos, costos: costos, margen: ingresos - costos,
     margenPct: ingresos > 0 ? (ingresos - costos) / ingresos * 100 : 0
   };

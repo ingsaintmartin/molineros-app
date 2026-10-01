@@ -27,10 +27,13 @@ async function itemsPorTrabajo() {
 
 // Trabajos con sus ítems y totales calculados
 async function trabajosConTotales() {
-  const [trabajos, mapaItems] = await Promise.all([getTrabajos(), itemsPorTrabajo()]);
+  const [trabajos, mapaItems, vehiculos] = await Promise.all([getTrabajos(), itemsPorTrabajo(), getVehiculos()]);
+  const vehMap = {};
+  for (const v of vehiculos) vehMap[v.id] = v;
   return trabajos.map(t => {
     const items = mapaItems[t.id] || [];
-    return { t: t, items: items, tot: totalesTrabajo(t, items) };
+    const veh = vehMap[t.vehiculoId] || null;
+    return { t: t, items: items, tot: totalesTrabajo(t, items, veh) };
   });
 }
 

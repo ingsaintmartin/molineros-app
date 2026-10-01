@@ -122,14 +122,15 @@ Pantallas.trabajos = {
       return '<div class="vacio"><span class="emoji">🔧</span>El trabajo no existe.</div>' +
         '<button class="btn btn-ghost" onclick="go(\'trabajos\', {vista:\'lista\'}, true)">Volver a la lista</button>';
     }
-    const [items, cliente, instalacion, gastos, presupuesto] = await Promise.all([
+    const [items, cliente, instalacion, gastos, presupuesto, vehiculo] = await Promise.all([
       getItemsDeTrabajo(id),
       t.clienteId ? getCliente(t.clienteId) : null,
       t.instalacionId ? getInstalacion(t.instalacionId) : null,
       getGastosDeTrabajo(id),
-      t.presupuestoId ? getFactura(t.presupuestoId) : null
+      t.presupuestoId ? getFactura(t.presupuestoId) : null,
+      t.vehiculoId ? getVehiculo(t.vehiculoId) : null
     ]);
-    const tot = totalesTrabajo(t, items);
+    const tot = totalesTrabajo(t, items, vehiculo);
     const tareas = (t.tareas || []).map(normTarea);
     const fotos = (t.fotos || []).map(fotoSegura).filter(Boolean);
 
@@ -208,13 +209,13 @@ Pantallas.trabajos = {
     const neg = tot.margen < 0;
     h += '<div class="card"><div class="sec-titulo">💰 Totales</div>' +
       '<table class="eco">' +
-      '<tr><td>Materiales</td><td class="num">' + esc(formatoPeso(tot.materialesPrecio)) + '</td></tr>' +
+      '<tr><td>Materiales (cobrado)</td><td class="num">' + esc(formatoPeso(tot.materialesPrecio)) + '</td></tr>' +
       '<tr><td>Mano de obra</td><td class="num">' + esc(formatoPeso(tot.manoObra)) + '</td></tr>' +
-      '<tr><td>Viaje</td><td class="num">' + esc(formatoPeso(tot.viaje)) + '</td></tr>' +
+      (tot.viaje > 0 ? '<tr><td>Traslado / Viáticos (cobrado)</td><td class="num">' + esc(formatoPeso(tot.viaje)) + '</td></tr>' : '') +
       (tot.manual > 0
         ? '<tr><td>Monto manual</td><td class="num">' + esc(formatoPeso(tot.manual)) + '</td></tr>' : '') +
-      '<tr class="total"><td>Ingresos</td><td class="num">' + esc(formatoPeso(tot.ingresos)) + '</td></tr>' +
-      '<tr><td>Costos (materiales + viaje)</td><td class="num">' + esc(formatoPeso(tot.costos)) + '</td></tr>' +
+      '<tr class="total"><td>Ingresos totales</td><td class="num">' + esc(formatoPeso(tot.ingresos)) + '</td></tr>' +
+      '<tr><td>Costos (materiales + vehículo)</td><td class="num">' + esc(formatoPeso(tot.costos)) + '</td></tr>' +
       '<tr class="margen' + (neg ? ' negativo' : '') + '"><td>Margen (' +
       esc((neg ? '−' : '') + Math.abs(tot.margenPct).toFixed(0) + ' %') + ')</td>' +
       '<td class="num">' + esc(formatoPeso(tot.margen)) + '</td></tr>' +
