@@ -169,6 +169,7 @@ function generarPDF(doc) {
   espacio(2);
   linea('Fecha: ' + (doc.fecha || '—'), MARGEN, 11, false);
   if (doc.estado) linea('Estado: ' + doc.estado, MARGEN, 11, false);
+  if (doc.modoIVA) linea(doc.modoIVA, MARGEN, 11, true);
   espacio(6);
   regla();
   espacio(4);
@@ -183,7 +184,8 @@ function generarPDF(doc) {
   espacio(4);
 
   // Tabla de ítems
-  const xCant = MARGEN, xDesc = MARGEN + 52, xPU = ANCHO - MARGEN - 170, xImp = ANCHO - MARGEN - 80;
+  const xCant = MARGEN, xDesc = MARGEN + 44, xIVA = ANCHO - MARGEN - 215,
+        xPU = ANCHO - MARGEN - 160, xImp = ANCHO - MARGEN - 75;
   linea('Cant.', xCant, 10, true);
   const yHead = y + 10 * 1.35;
   // (encabezado en la misma línea: retrocedemos)
@@ -196,19 +198,23 @@ function generarPDF(doc) {
     cmds.push(pdfAscii(') Tj ET\n'));
   };
   tb2('Descripción', xDesc, 10, true);
+  tb2('IVA', xIVA, 10, true);
   tb2('P. unit.', xPU, 10, true);
   tb2('Importe', xImp, 10, true);
   y -= 10 * 1.35;
   regla();
 
   const items = doc.items || [];
+  const ivaTxtDe = (v) => (v === null || v === undefined || v === '')
+    ? '—' : String(v).replace('.', ',') + '%';
   for (const it of items) {
     const cant = parseFloat(it.cantidad) || 0;
     const pu = parseFloat(it.precioUnit) || 0;
     const cantTxt = (Math.round(cant) === cant ? String(cant) : String(Math.round(cant * 100) / 100));
-    const lineasDesc = pdfEnvolver(it.descripcion || 'Ítem', 52);
+    const lineasDesc = pdfEnvolver(it.descripcion || 'Ítem', 44);
     if (y - lineasDesc.length * 13 < MARGEN + 20) nuevaPagina();
     tb2(cantTxt, xCant, 10, false);
+    tb2(ivaTxtDe(it.iva), xIVA, 10, false);
     tb2(formatoPesoPDF(pu), xPU, 10, false);
     tb2(formatoPesoPDF(cant * pu), xImp, 10, true);
     for (const ld of lineasDesc) {
@@ -220,8 +226,9 @@ function generarPDF(doc) {
   espacio(4);
   regla();
   espacio(2);
+  const esMasIVA = doc.modoIVA && doc.modoIVA.indexOf('más IVA') >= 0;
   if (doc.neto !== undefined && doc.neto !== null) {
-    tb2('Neto: ' + formatoPesoPDF(doc.neto), xPU - 40, 11, false);
+    tb2((esMasIVA ? 'Subtotal:' : 'Neto:') + ' ' + formatoPesoPDF(doc.neto), xPU - 40, 11, false);
     y -= 11 * 1.35;
     tb2('IVA: ' + formatoPesoPDF(doc.iva || 0), xPU - 40, 11, false);
     y -= 11 * 1.35;
@@ -262,8 +269,8 @@ function generarPDF(doc) {
       '/Resources << /Font << /F1 ' + idFuente1 + ' 0 R /F2 ' + idFuente2 + ' 0 R >>' + xobj + ' >> ' +
       '/Contents ' + idsContenido[k] + ' 0 R >>\nendobj\n'));
   }
-  push(pdfAscii(idFuente1 + ' 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n'));
-  push(pdfAscii(idFuente2 + ' 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n'));
+  push(pdfAscii(idFuente1 + ' 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n'));
+  push(pdfAscii(idFuente2 + ' 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n'));
   if (logo) {
     push(pdfAscii(idImagen + ' 0 obj\n<< /Type /XObject /Subtype /Image ' +
       '/Width ' + logo.w + ' /Height ' + logo.h + ' /ColorSpace /DeviceRGB ' +
@@ -312,12 +319,14 @@ async function generarDocumentoPDFBlob(id) {
   const tipoDoc = nombreTipoDoc(f.tipo) + ((f.tipo === 'factura' && f.letra) ? ' ' + f.letra : '');
   const tot = (f.neto !== null && f.neto !== undefined)
     ? { total: f.total, neto: f.neto, iva: f.ivaMonto || 0 }
-    : totalesConIVA(items, 21);
+    : totalesConIVA(items, 21, f.ivaIncluido !== false);
+  const conIVA = f.ivaIncluido !== false;
   const blob = generarPDF({
     titulo: tipoDoc,
     numero: f.numero || '—',
     fecha: fechaLegible(f.fecha) || '—',
     estado: (typeof ESTADOS_FACTURA !== 'undefined' && ESTADOS_FACTURA[f.estado]) || f.estado || '',
+    modoIVA: conIVA ? 'Precios con IVA incluido' : 'Precios más IVA',
     empresa: {
       nombre: empresa.nombre, cuit: empresa.cuit,
       condicionFiscal: nombreCondicionFiscal(empresa.condicionFiscal),
@@ -331,7 +340,8 @@ async function generarDocumentoPDFBlob(id) {
       condicionFiscal: nombreCondicionFiscal(cli.condicionFiscal)
     } : {},
     items: items.map(it => ({
-      cantidad: it.cantidad, descripcion: it.descripcion, precioUnit: it.precioUnit
+      cantidad: it.cantidad, descripcion: it.descripcion, precioUnit: it.precioUnit,
+      iva: (it.iva === null || it.iva === undefined || it.iva === '') ? null : it.iva
     })),
     neto: tot.neto, iva: tot.iva, total: tot.total,
     observaciones: f.observaciones || ''
