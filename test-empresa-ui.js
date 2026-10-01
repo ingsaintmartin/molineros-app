@@ -69,7 +69,7 @@ const idx = leer('index.html');
 t('index.html carga t-empresa.js', idx.includes('js/t-empresa.js'));
 
 const sw = leer('service-worker.js');
-t('SW v16', sw.includes('molineroapp-v16'));
+t('SW v17', sw.includes('molineroapp-v17'));
 t('SW precachea t-empresa.js', sw.includes("'./js/t-empresa.js'"));
 
 const tra = leer('js/t-trabajos.js');
@@ -79,6 +79,20 @@ t('trabajo form: preserva presupuestoId', /traPresupuestoId/.test(tra) && /datos
 const db = leer('db.js');
 t('db: crearTrabajoDesdePresupuesto', /async function crearTrabajoDesdePresupuesto/.test(db));
 t('db: getTrabajosDePresupuesto', /async function getTrabajosDePresupuesto/.test(db));
+t('db: guardarItemsFactura', /async function guardarItemsFactura/.test(db));
+t('db: desvincularTrabajosDePresupuesto', /async function desvincularTrabajosDePresupuesto/.test(db));
+t('db: eliminarPresupuesto', /async function eliminarPresupuesto/.test(db));
+
+const facJs = leer('js/t-facturacion.js');
+t('flujo: botón crear orden en presupuesto aceptado', /data-crear-orden/.test(facJs));
+t('flujo: texto crear orden de trabajo', /Crear orden de trabajo/.test(facJs));
+t('flujo: edición de ítems disponible', /guardarItemsFactura/.test(facJs));
+t('flujo: ya no dice "eliminá y creá de nuevo"', !/eliminá y creá de nuevo/.test(facJs));
+t('flujo: aviso de orden existente al editar', /no modifican las órdenes existentes/.test(facJs));
+t('flujo: eliminar presupuesto desvincula', /eliminarPresupuesto/.test(facJs));
+t('flujo: pasar a factura no en rechazado', /f\.estado !== 'rechazado'/.test(facJs));
+t('flujo: trabajoId se conserva en fila', /data-trabajoid/.test(facJs));
+t('flujo: agregar ítem también al editar', /facAddItem/.test(facJs));
 
 const seed = leer('js/seed.js');
 t('seed: empresa demo', /guardarEmpresa/.test(seed));
