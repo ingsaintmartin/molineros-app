@@ -47,10 +47,26 @@ const Mapa = {
 
     const centro = tienePunto ? [lat, lng] : (markers.length ? [markers[0].lat, markers[0].lng] : [-35.5, -63.5]);
     const mapa = L.map(el, { scrollWheelZoom: false }).setView(centro, tienePunto || markers.length ? 14 : 6);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Capa principal: OSM. Si sus baldosas fallan (red que la bloquea,
+    // DNS, etc.), se cambia sola a CARTO como respaldo.
+    const capaOSM = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(mapa);
+    });
+    const capaRespaldo = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      subdomains: 'abcd',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    });
+    let erroresTiles = 0, conRespaldo = false;
+    capaOSM.on('tileerror', () => {
+      erroresTiles++;
+      if (!conRespaldo && erroresTiles >= 4) {
+        conRespaldo = true;
+        try { mapa.removeLayer(capaOSM); capaRespaldo.addTo(mapa); } catch (e) {}
+      }
+    });
+    capaOSM.addTo(mapa);
     this._instancias.push(mapa);
 
     const puntos = [];
