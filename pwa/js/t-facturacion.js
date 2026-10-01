@@ -139,7 +139,12 @@ async function facDetalleHTML(id) {
     const trabajos = await getTrabajosDePresupuesto(id);
     h += '<div class="card"><div class="sec-titulo"><h3>🔧 Órdenes de trabajo</h3></div>';
     if (!trabajos.length) {
-      h += '<div class="vacio">Sin órdenes todavía. Al aceptar el presupuesto se crea una sola.</div>';
+      if (f.estado === 'aceptado') {
+        h += '<p class="hint">Este presupuesto está aceptado pero todavía no tiene orden de trabajo.</p>' +
+          '<button class="btn btn-primary" data-crear-orden>🔧 Crear orden de trabajo</button>';
+      } else {
+        h += '<div class="vacio">Sin órdenes todavía. Al aceptar el presupuesto se crea una sola.</div>';
+      }
     } else {
       for (const t of trabajos) {
         h += '<div class="dato"><span class="k">' + esc(fechaLegible(t.fecha) || '—') + '</span><span class="v">' +
@@ -154,7 +159,7 @@ async function facDetalleHTML(id) {
     '<button class="btn btn-verde" data-compartir-pdf>📤 Enviar PDF (WhatsApp / Email)</button>' +
     '<button class="btn" data-descargar-pdf>📥 Descargar PDF (para imprimir)</button>' +
     '<button class="btn" data-editar-fac>✏️ Editar</button>';
-  if (f.tipo === 'presupuesto') {
+  if (f.tipo === 'presupuesto' && f.estado !== 'rechazado') {
     h += '<button class="btn" data-pasar-factura>📄 Pasar a factura</button>';
   }
   h += '<button class="btn btn-ghost" data-eliminar-fac>🗑️ Eliminar</button>';
@@ -201,6 +206,16 @@ function facDetalleBind(id) {
   });
   const nt = document.querySelector('[data-nuevo-trabajo]');
   if (nt) nt.onclick = () => go('trabajos', { vista: 'form', presupuestoId: id });
+  const co = document.querySelector('[data-crear-orden]');
+  if (co) co.onclick = async () => {
+    const t = await crearTrabajoDesdePresupuesto(id);
+    if (t) {
+      snack('Orden de trabajo creada en la pestaña Trabajos.');
+      go(_tabDoc, { vista: 'detalle', id: id }, true);
+    } else {
+      snack('No se pudo crear la orden.');
+    }
+  };
 
   const ed = document.querySelector('[data-editar-fac]');
   if (ed) ed.onclick = () => go(_tabDoc, { vista: 'form', id: id });
@@ -237,11 +252,15 @@ function facDetalleBind(id) {
   if (del) del.onclick = async () => {
     const f = await getFactura(id);
     if (!f) return;
+    const esPres = f.tipo === 'presupuesto';
+    const nOrd = esPres ? (await getTrabajosDePresupuesto(id)).length : 0;
     const ok = await confirmar('Eliminar ' + nombreTipoDoc(f.tipo).toLowerCase(),
-      '¿Eliminar el ' + nombreTipoDoc(f.tipo).toLowerCase() + ' Nº ' + f.numero + '? Se borran también sus ítems.',
+      '¿Eliminar el ' + nombreTipoDoc(f.tipo).toLowerCase() + ' Nº ' + f.numero + '? Se borran también sus ítems.' +
+      (nOrd ? ' Las ' + nOrd + ' órdenes de trabajo vinculadas se conservan como trabajos independientes.' : ''),
       'Eliminar');
     if (!ok) return;
-    await eliminarFactura(id);
+    if (esPres) await eliminarPresupuesto(id);
+    else await eliminarFactura(id);
     snack('Documento eliminado.');
     go(_tabDoc, { vista: 'lista', tipo: f.tipo || 'factura' }, true);
   };
@@ -258,7 +277,7 @@ function facIvaOptionsHTML(sel) {
 function facItemRowHTML(it) {
   it = it || {};
   const ivaSel = (it.iva !== null && it.iva !== undefined && it.iva !== '') ? it.iva : 21;
-  return '<div class="item-dinamico"><div class="grid">' +
+  return '<div class="item-dinamico"' + (it.trabajoId ? ' data-trabajoid="' + esc(it.trabajoId) + '"' : '') + '><div class="grid">' +
     '<div class="con-micro"><input type="text" data-f-desc placeholder="Descripción" value="' + esc(it.descripcion || '') + '" />' +
     microBtnHTML('fdesc_nuevo') + '</div>' +
     '<input type="number" data-f-cant placeholder="Cant." value="' + esc(it.cantidad !== undefined ? it.cantidad : 1) + '" inputmode="decimal" />' +
@@ -280,7 +299,8 @@ async function facFormHTML(params) {
   const letraActual = (f && f.letra) || params.letra || letraSugerida(empresa.condicionFiscal);
   const letraOpts = ['A', 'B', 'C'].map(l => ({ value: l, texto: 'Factura ' + l }));
 
-  // Ítems iniciales: edición no los toca; params.trabajoId precarga uno
+  // Ítems iniciales: al crear, vacío o precarga desde trabajo;
+  // al editar, se cargan los ítems guardados y son totalmente editables.
   let itemsInicial = [];
   if (!f && params.trabajoId) {
     const conTot = await trabajosConTotales();
@@ -289,6 +309,8 @@ async function facFormHTML(params) {
       itemsInicial.push({ trabajoId: hallado.t.id, descripcion: hallado.t.descripcion || 'Trabajo', cantidad: 1, precioUnit: Math.round(hallado.tot.ingresos * 100) / 100 });
     }
   }
+  const itemsEdit = f ? await getItemsDeFactura(f.id) : [];
+  const ordenesVinculadas = (f && f.tipo === 'presupuesto') ? await getTrabajosDePresupuesto(f.id) : [];
 
   let h = '<div class="card">' +
     campoSelect('facTipo', 'Tipo', tipoOpts, tipo) +
@@ -301,16 +323,19 @@ async function facFormHTML(params) {
 
   h += '<div class="seccion-titulo"><h3>Ítems</h3></div><div id="facItems">';
   if (f) {
-    h += '<p class="hint">Para cambiar ítems, eliminá y creá de nuevo el documento.</p>';
+    if (f.tipo === 'presupuesto' && f.estado === 'aceptado' && ordenesVinculadas.length) {
+      h += '<p class="hint">⚠️ Este presupuesto ya generó ' + ordenesVinculadas.length +
+        ' orden' + (ordenesVinculadas.length > 1 ? 'es' : '') +
+        ' de trabajo. Los cambios en ítems no modifican las órdenes existentes.</p>';
+    }
+    h += itemsEdit.map(facItemRowHTML).join('') || facItemRowHTML();
   } else {
     h += itemsInicial.map(facItemRowHTML).join('') || facItemRowHTML();
   }
   h += '</div>';
-  if (!f) {
-    h += '<p class="hint">Elegí si los precios ya traen el IVA adentro o si se suma arriba; el neto se discrimina solo.</p>' +
-      '<button class="btn" id="facAddItem">＋ Agregar ítem</button>' +
-      '<button class="btn" id="facDesdeTrabajo">🔧 ＋ Desde trabajo</button>';
-  }
+  h += '<p class="hint">Elegí si los precios ya traen el IVA adentro o si se suma arriba; el neto se discrimina solo.</p>' +
+    '<button class="btn" id="facAddItem">＋ Agregar ítem</button>' +
+    '<button class="btn" id="facDesdeTrabajo">🔧 ＋ Desde trabajo</button>';
 
   h += '<div class="card"><div class="field"><label for="facObs">Observaciones</label>' +
     '<div class="con-micro"><textarea id="facObs" placeholder="Dictá o escribí…">' +
@@ -450,9 +475,11 @@ function facFormBind(params) {
       f.letra = datos.letra;
       f.fecha = datos.fecha; f.observaciones = datos.observaciones;
       f.ivaIncluido = datos.ivaIncluido;
-      // Al editar se recalculan neto/IVA/total con el modo elegido
-      const itemsGuardados = await getItemsDeFactura(f.id);
-      const totEdit = totalesConIVA(itemsGuardados, 21, f.ivaIncluido);
+      // Al editar, los ítems se reemplazan por los del formulario y se
+      // recalculan neto/IVA/total con el modo elegido
+      const itemsNuevos = facLeerItems().filter(it => it.descripcion && it.precioUnit > 0 && it.cantidad > 0);
+      await guardarItemsFactura(f.id, itemsNuevos);
+      const totEdit = totalesConIVA(itemsNuevos, 21, f.ivaIncluido);
       f.subtotal = totEdit.total; f.neto = totEdit.neto;
       f.ivaMonto = totEdit.iva; f.total = totEdit.total;
       await actualizarFactura(f);
