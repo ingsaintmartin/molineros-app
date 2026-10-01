@@ -122,11 +122,12 @@ Pantallas.trabajos = {
       return '<div class="vacio"><span class="emoji">🔧</span>El trabajo no existe.</div>' +
         '<button class="btn btn-ghost" onclick="go(\'trabajos\', {vista:\'lista\'}, true)">Volver a la lista</button>';
     }
-    const [items, cliente, instalacion, gastos] = await Promise.all([
+    const [items, cliente, instalacion, gastos, presupuesto] = await Promise.all([
       getItemsDeTrabajo(id),
       t.clienteId ? getCliente(t.clienteId) : null,
       t.instalacionId ? getInstalacion(t.instalacionId) : null,
-      getGastosDeTrabajo(id)
+      getGastosDeTrabajo(id),
+      t.presupuestoId ? getFactura(t.presupuestoId) : null
     ]);
     const tot = totalesTrabajo(t, items);
     const tareas = (t.tareas || []).map(normTarea);
@@ -146,6 +147,10 @@ Pantallas.trabajos = {
       (instalacion
         ? '<button type="button" class="btn btn-ghost" style="padding:4px 10px" data-go-instalacion="' + esc(instalacion.id) + '">' + esc(instalacion.nombre || 'Instalación') + '</button>'
         : '—') + '</span></div>' +
+      (presupuesto
+        ? '<div class="dato"><span class="k">Presupuesto</span><span class="v">' +
+          '<button type="button" class="btn btn-ghost" style="padding:4px 10px" data-go-presupuesto="' + esc(presupuesto.id) + '">📄 Nº ' + esc(presupuesto.numero || '') + '</button></span></div>'
+        : '') +
       '</div></div>';
 
     // Tareas (checklist)
@@ -273,6 +278,9 @@ Pantallas.trabajos = {
     document.querySelectorAll('[data-go-instalacion]').forEach(b => {
       b.onclick = () => go('clientes', { vista: 'instalacion', id: b.dataset.goInstalacion });
     });
+    document.querySelectorAll('[data-go-presupuesto]').forEach(b => {
+      b.onclick = () => go('presupuestos', { vista: 'detalle', id: b.dataset.goPresupuesto });
+    });
 
     document.querySelectorAll('[data-foto-i]').forEach(b => {
       b.onclick = () => abrirFoto(fotos[+b.dataset.fotoI]);
@@ -335,13 +343,18 @@ Pantallas.trabajos = {
     const [clientes, repuestos, vehiculos] = await Promise.all([
       getClientes(), getRepuestos(), getVehiculos()
     ]);
+    // Orden vinculada a un presupuesto: precarga el cliente y guarda el vínculo
+    const presId = t ? (t.presupuestoId || '') : (params.presupuestoId || '');
+    const pres = (!t && presId) ? await getFactura(presId) : null;
 
-    const clienteSel = t ? t.clienteId : (params.clienteId || '');
+    const clienteSel = t ? t.clienteId : (params.clienteId || (pres && pres.clienteId) || '');
     const insSel = t ? (t.instalacionId || '') : (params.instalacionId || '');
     const tareas = t ? (t.tareas || []).map(normTarea) : [];
     const fotos = t ? (t.fotos || []) : [];
 
     let h = '<form class="form" id="formTra" autocomplete="off">' +
+      '<input type="hidden" id="traPresupuestoId" value="' + esc(presId) + '" />' +
+      (pres ? '<p class="hint">🔧 Orden de trabajo del presupuesto Nº ' + esc(pres.numero || '') + ' — se puede modificar libremente.</p>' : '') +
       campoSelect('traCliente', 'Cliente', clientes.map(c => ({ value: c.id, texto: c.nombre })), clienteSel, { req: true }) +
       '<div id="traInsWrap"></div>' +
       '<div class="field-row">' +
@@ -561,6 +574,7 @@ Pantallas.trabajos = {
       datos.montoManual = valNum('traManual');
       datos.observaciones = val('traObs');
       datos.fotos = getFotos('traForm');
+      datos.presupuestoId = val('traPresupuestoId') || (t && t.presupuestoId) || null;
 
       let id;
       if (t) {
