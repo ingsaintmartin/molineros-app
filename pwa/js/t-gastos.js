@@ -199,8 +199,8 @@ Pantallas.vehiculos = {
           esc(v.patente || '—') + '</span></div>' +
           '<div class="dato"><span class="k">Km actual</span><span class="v">' +
           esc((parseFloat(v.kmActual) || 0).toLocaleString('es-AR')) + ' km</span></div>' +
-          '<div class="dato"><span class="k">Costo por km</span><span class="v">' +
-          esc(formatoPeso(v.costoKm)) + '</span></div>';
+          '<div class="dato"><span class="k">Litros de gasoil por km</span><span class="v">' +
+          esc(v.litrosKm != null && v.litrosKm !== '' ? String(v.litrosKm) : '—') + '</span></div>';
         if (v.observaciones) {
           h += '<div class="dato"><span class="k">Notas</span><span class="v">' +
             esc(v.observaciones) + '</span></div>';
@@ -225,9 +225,9 @@ Pantallas.vehiculos = {
       campo('text', 'vehNombre', 'Nombre', v ? v.nombre : '', { req: true }) +
       campo('text', 'vehPatente', 'Patente', v ? v.patente : '') +
       campo('number', 'vehKm', 'Km actual', v ? v.kmActual : '', { inputmode: 'numeric' }) +
-      campo('number', 'vehCostoKm', 'Costo por km ($)', v ? v.costoKm : '', {
-        inputmode: 'decimal',
-        hint: 'Incluí amortización + combustible + seguro + mantenimiento, todo dividido por los km que hacés por año'
+      campo('number', 'vehLitrosKm', 'Litros de gasoil por km', v && v.litrosKm !== null && v.litrosKm !== undefined ? v.litrosKm : '', {
+        inputmode: 'decimal', placeholder: '1',
+        hint: 'Viáticos: para una camioneta suele ser 1 litro por km'
       }) +
       campoTexto('vehObs', 'Observaciones', v ? v.observaciones : '') +
       '<button class="btn btn-ambar" id="vehGuardar">' + (v ? 'Guardar cambios' : 'Guardar vehículo') + '</button>';
@@ -273,15 +273,16 @@ Pantallas.vehiculos = {
       btnGuardar.onclick = async () => {
         const nombre = val('vehNombre');
         if (!nombre) { snack('El nombre es obligatorio.'); return; }
+        const anterior = id ? await getVehiculo(id) : null;
         const datos = {
           nombre: nombre,
           patente: val('vehPatente'),
           kmActual: valNum('vehKm'),
-          costoKm: valNum('vehCostoKm'),
+          litrosKm: valNum('vehLitrosKm'),
+          costoKm: (anterior && anterior.costoKm) || 0,
           observaciones: val('vehObs')
         };
         if (id) {
-          const anterior = await getVehiculo(id);
           await actualizarVehiculo(Object.assign({}, anterior || {}, datos, { id: id }));
         } else {
           await crearVehiculo(datos);
