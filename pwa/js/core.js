@@ -90,7 +90,8 @@ const ESTADOS_TRABAJO = {
   facturado: 'Facturado', cobrado: 'Cobrado'
 };
 const ESTADOS_FACTURA = {
-  pendiente: 'Pendiente', pagada: 'Cobrada', vencida: 'Vencida', anulada: 'Anulada'
+  pendiente: 'Pendiente', aceptado: 'Aceptado', rechazado: 'Rechazado',
+  pagada: 'Cobrada', vencida: 'Vencida', anulada: 'Anulada'
 };
 const TIPOS_INSTALACION = {
   molino: 'Molino', tanque: 'Tanque australiano', bebedero: 'Bebedero',

@@ -128,7 +128,7 @@ dbLocal.version(4).stores({
 });
 // Nota: Dexie elimina las tablas 'molinos' y 'reparaciones' que ya no figuran.
 
-dbLocal.version(4).stores({
+dbLocal.version(5).stores({
   clientes:         'id, nombre, createdAt',
   establecimientos: 'id, clienteId, nombre',
   instalaciones:    'id, clienteId, establecimientoId, tipo, createdAt',
@@ -139,11 +139,13 @@ dbLocal.version(4).stores({
   factura_items:    'id, facturaId',
   gastos:           'id, fecha, categoria, trabajoId',
   vehiculos:        'id, nombre',
+  empresa:          'id',
   pendientes:       '++seq, createdAt'
 }).upgrade(async tx => {
-  // Migración v3 → v4: las instalaciones existentes quedan sin
-  // establecimiento (establecimientoId vacío) y se agrupan en
-  // "Sin establecimiento" hasta que se les asigne uno.
+  // Migración v4 → v5: tabla empresa (una sola fila, id='empresa').
+  // Los campos nuevos (clientes.condicionFiscal, facturas.letra/neto/ivaMonto,
+  // factura_items.iva) no necesitan migración: quedan vacíos y la UI
+  // les da valor por defecto al mostrarlos.
 });
 
 // ---- Nube Turso (opcional: la app anda igual sin ella) ----
@@ -206,7 +208,8 @@ function clienteToRow(c) {
   return {
     id: c.id, nombre: c.nombre || '', campo: c.campo || null,
     localidad: c.localidad || null, telefono: c.telefono || null,
-    cuit: c.cuit || null, email: c.email || null,
+    cuit: c.cuit || null, condicion_fiscal: c.condicionFiscal || null,
+    email: c.email || null,
     observaciones: c.observaciones || null, created_at: c.createdAt || Date.now()
   };
 }
@@ -214,7 +217,8 @@ function rowToCliente(r) {
   return {
     id: r.id, nombre: r.nombre || '', campo: r.campo || '',
     localidad: r.localidad || '', telefono: r.telefono || '',
-    cuit: r.cuit || '', email: r.email || '',
+    cuit: r.cuit || '', condicionFiscal: r.condicion_fiscal || '',
+    email: r.email || '',
     observaciones: r.observaciones || '', createdAt: r.created_at
   };
 }
@@ -329,8 +333,10 @@ function rowToRepuesto(r) {
 function facturaToRow(f) {
   return {
     id: f.id, cliente_id: f.clienteId || null, numero: f.numero || '',
-    tipo: f.tipo || 'factura', fecha: f.fecha || null, estado: f.estado || 'pendiente',
-    subtotal: numOVacio(f.subtotal) ?? 0, total: numOVacio(f.total) ?? 0,
+    tipo: f.tipo || 'factura', letra: f.letra || null,
+    fecha: f.fecha || null, estado: f.estado || 'pendiente',
+    subtotal: numOVacio(f.subtotal) ?? 0, neto: numOVacio(f.neto),
+    iva_monto: numOVacio(f.ivaMonto), total: numOVacio(f.total) ?? 0,
     observaciones: f.observaciones || null,
     created_at: f.createdAt || Date.now(), updated_at: f.updatedAt || Date.now()
   };
@@ -338,8 +344,10 @@ function facturaToRow(f) {
 function rowToFactura(r) {
   return {
     id: r.id, clienteId: r.cliente_id || null, numero: r.numero || '',
-    tipo: r.tipo || 'factura', fecha: r.fecha || '', estado: r.estado || 'pendiente',
-    subtotal: r.subtotal ?? 0, total: r.total ?? 0,
+    tipo: r.tipo || 'factura', letra: r.letra || '',
+    fecha: r.fecha || '', estado: r.estado || 'pendiente',
+    subtotal: r.subtotal ?? 0, neto: r.neto ?? null, ivaMonto: r.iva_monto ?? null,
+    total: r.total ?? 0,
     observaciones: r.observaciones || '',
     createdAt: r.created_at, updatedAt: r.updated_at
   };
@@ -349,7 +357,7 @@ function facturaItemToRow(it) {
   return {
     id: it.id, factura_id: it.facturaId, trabajo_id: it.trabajoId || null,
     descripcion: it.descripcion || '', cantidad: numOVacio(it.cantidad) ?? 1,
-    precio_unit: numOVacio(it.precioUnit) ?? 0,
+    precio_unit: numOVacio(it.precioUnit) ?? 0, iva: numOVacio(it.iva),
     created_at: it.createdAt || Date.now()
   };
 }
@@ -357,7 +365,7 @@ function rowToFacturaItem(r) {
   return {
     id: r.id, facturaId: r.factura_id, trabajoId: r.trabajo_id || null,
     descripcion: r.descripcion || '', cantidad: r.cantidad ?? 1,
-    precioUnit: r.precio_unit ?? 0, createdAt: r.created_at
+    precioUnit: r.precio_unit ?? 0, iva: r.iva ?? null, createdAt: r.created_at
   };
 }
 
@@ -395,6 +403,78 @@ function rowToVehiculo(r) {
 }
 
 // ------------------------------------------------------------------
+// Datos fiscales (ARCA): condiciones frente al IVA y alícuotas.
+// El precio que se carga en cada ítem es el precio FINAL (con IVA
+// incluido); el neto se discrimina hacia atrás para el PDF.
+// ------------------------------------------------------------------
+const CONDICIONES_FISCALES = {
+  consumidor_final: 'Consumidor Final',
+  monotributista: 'Monotributista',
+  responsable_inscripto: 'Responsable Inscripto',
+  exento: 'IVA Exento',
+  no_categorizado: 'No Categorizado'
+};
+function nombreCondicionFiscal(c) {
+  return CONDICIONES_FISCALES[c] || '—';
+}
+const ALICUOTAS_IVA = [21, 10.5, 27, 0];
+function nombreAlicuota(a) {
+  const v = parseFloat(a);
+  if (!v) return 'Exento';
+  return String(v).replace('.', ',') + '%';
+}
+// Discrimina el IVA de un total con IVA incluido
+function discriminarIVA(total, alicuota) {
+  const t = parseFloat(total) || 0;
+  const a = parseFloat(alicuota) || 0;
+  if (!(a > 0)) return { neto: Math.round(t * 100) / 100, iva: 0 };
+  const neto = Math.round((t / (1 + a / 100)) * 100) / 100;
+  return { neto: neto, iva: Math.round((t - neto) * 100) / 100 };
+}
+// Letra de factura sugerida según la condición fiscal de la empresa
+function letraSugerida(condicionEmpresa) {
+  if (condicionEmpresa === 'responsable_inscripto') return 'B';
+  return 'C'; // monotributista / exento → C
+}
+// Totales de un conjunto de ítems {cantidad, precioUnit, iva}
+// (precio con IVA incluido). Devuelve {total, neto, iva}.
+function totalesConIVA(items, ivaDefault) {
+  let total = 0, neto = 0;
+  for (const it of items || []) {
+    const t = (parseFloat(it.cantidad) || 0) * (parseFloat(it.precioUnit) || 0);
+    total += t;
+    const alic = (it.iva === null || it.iva === undefined || it.iva === '')
+      ? ivaDefault : parseFloat(it.iva);
+    neto += discriminarIVA(t, alic).neto;
+  }
+  total = Math.round(total * 100) / 100;
+  neto = Math.round(neto * 100) / 100;
+  return { total: total, neto: neto, iva: Math.round((total - neto) * 100) / 100 };
+}
+
+function empresaToRow(e) {
+  return {
+    id: 'empresa', nombre: e.nombre || '', cuit: e.cuit || null,
+    condicion_fiscal: e.condicionFiscal || 'monotributista',
+    domicilio: e.domicilio || null, localidad: e.localidad || null,
+    telefono: e.telefono || null, email: e.email || null,
+    punto_venta: parseInt(e.puntoVenta, 10) || 1,
+    logo: e.logo || null,
+    created_at: e.createdAt || Date.now(), updated_at: e.updatedAt || Date.now()
+  };
+}
+function rowToEmpresa(r) {
+  return {
+    id: 'empresa', nombre: r.nombre || '', cuit: r.cuit || '',
+    condicionFiscal: r.condicion_fiscal || 'monotributista',
+    domicilio: r.domicilio || '', localidad: r.localidad || '',
+    telefono: r.telefono || '', email: r.email || '',
+    puntoVenta: r.punto_venta || 1, logo: r.logo || null,
+    createdAt: r.created_at, updatedAt: r.updated_at
+  };
+}
+
+// ------------------------------------------------------------------
 // Cola de sincronización (outbox)
 // ------------------------------------------------------------------
 async function registrarOperacion(op) {
@@ -403,7 +483,7 @@ async function registrarOperacion(op) {
 }
 
 const COLUMNAS = {
-  clientes:      ['id', 'nombre', 'campo', 'localidad', 'telefono', 'cuit', 'email', 'observaciones', 'created_at'],
+  clientes:      ['id', 'nombre', 'campo', 'localidad', 'telefono', 'cuit', 'condicion_fiscal', 'email', 'observaciones', 'created_at'],
   establecimientos: ['id', 'cliente_id', 'nombre', 'contacto', 'telefono', 'localidad', 'observaciones', 'created_at'],
   instalaciones: ['id', 'cliente_id', 'establecimiento_id', 'tipo', 'nombre', 'marca', 'modelo', 'caracteristicas',
                   'estado', 'observaciones', 'lat', 'lng', 'fotos', 'created_at', 'updated_at'],
@@ -412,11 +492,13 @@ const COLUMNAS = {
                   'estado', 'observaciones', 'fotos', 'created_at', 'updated_at'],
   trabajo_items: ['id', 'trabajo_id', 'repuesto_id', 'descripcion', 'cantidad', 'costo_unit', 'precio_unit', 'created_at'],
   repuestos:     ['id', 'nombre', 'categoria', 'stock', 'stock_min', 'costo', 'precio', 'created_at', 'updated_at'],
-  facturas:      ['id', 'cliente_id', 'numero', 'tipo', 'fecha', 'estado', 'subtotal', 'total',
+  facturas:      ['id', 'cliente_id', 'numero', 'tipo', 'letra', 'fecha', 'estado', 'subtotal', 'neto', 'iva_monto', 'total',
                   'observaciones', 'created_at', 'updated_at'],
-  factura_items: ['id', 'factura_id', 'trabajo_id', 'descripcion', 'cantidad', 'precio_unit', 'created_at'],
+  factura_items: ['id', 'factura_id', 'trabajo_id', 'descripcion', 'cantidad', 'precio_unit', 'iva', 'created_at'],
   gastos:        ['id', 'fecha', 'categoria', 'descripcion', 'monto', 'trabajo_id', 'vehiculo_id', 'created_at'],
-  vehiculos:     ['id', 'nombre', 'patente', 'km_actual', 'costo_km', 'observaciones', 'created_at']
+  vehiculos:     ['id', 'nombre', 'patente', 'km_actual', 'costo_km', 'observaciones', 'created_at'],
+  empresa:       ['id', 'nombre', 'cuit', 'condicion_fiscal', 'domicilio', 'localidad', 'telefono', 'email',
+                  'punto_venta', 'logo', 'created_at', 'updated_at']
 };
 const TABLAS_SYNC = Object.keys(COLUMNAS);
 
@@ -454,11 +536,16 @@ const TURSO_DDL = [
      created_at INTEGER, updated_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS facturas (
      id TEXT PRIMARY KEY, cliente_id TEXT, numero TEXT, tipo TEXT,
-     fecha TEXT, estado TEXT, subtotal REAL, total REAL,
+     letra TEXT, fecha TEXT, estado TEXT, subtotal REAL, neto REAL,
+     iva_monto REAL, total REAL,
      observaciones TEXT, created_at INTEGER, updated_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS factura_items (
      id TEXT PRIMARY KEY, factura_id TEXT, trabajo_id TEXT,
-     descripcion TEXT, cantidad REAL, precio_unit REAL, created_at INTEGER)`,
+     descripcion TEXT, cantidad REAL, precio_unit REAL, iva REAL, created_at INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS empresa (
+     id TEXT PRIMARY KEY, nombre TEXT, cuit TEXT, condicion_fiscal TEXT,
+     domicilio TEXT, localidad TEXT, telefono TEXT, email TEXT,
+     punto_venta INTEGER, logo TEXT, created_at INTEGER, updated_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS gastos (
      id TEXT PRIMARY KEY, fecha TEXT, categoria TEXT, descripcion TEXT,
      monto REAL, trabajo_id TEXT, vehiculo_id TEXT, created_at INTEGER)`,
@@ -467,7 +554,12 @@ const TURSO_DDL = [
      costo_km REAL, observaciones TEXT, created_at INTEGER)`,
   // Columnas nuevas en tablas que ya existían (se ignoran si ya están)
   `ALTER TABLE clientes ADD COLUMN cuit TEXT`,
+  `ALTER TABLE clientes ADD COLUMN condicion_fiscal TEXT`,
   `ALTER TABLE clientes ADD COLUMN email TEXT`,
+  `ALTER TABLE facturas ADD COLUMN letra TEXT`,
+  `ALTER TABLE facturas ADD COLUMN neto REAL`,
+  `ALTER TABLE facturas ADD COLUMN iva_monto REAL`,
+  `ALTER TABLE factura_items ADD COLUMN iva REAL`,
   `ALTER TABLE instalaciones ADD COLUMN establecimiento_id TEXT`,
   `CREATE INDEX IF NOT EXISTS idx_ins_cliente ON instalaciones(cliente_id)`,
   `CREATE INDEX IF NOT EXISTS idx_ins_est ON instalaciones(establecimiento_id)`,
@@ -566,7 +658,7 @@ async function descargarDesdeNube() {
         trabajos: rowToTrabajo, trabajo_items: rowToTrabajoItem,
         repuestos: rowToRepuesto, facturas: rowToFactura,
         factura_items: rowToFacturaItem, gastos: rowToGasto,
-        vehiculos: rowToVehiculo
+        vehiculos: rowToVehiculo, empresa: rowToEmpresa
       };
       for (const t of TABLAS_SYNC) {
         const filas = porTabla[t];
@@ -733,6 +825,35 @@ async function getClientes() {
   return dbLocal.clientes.orderBy('nombre').toArray();
 }
 async function getCliente(id) { return dbLocal.clientes.get(id); }
+
+// ------------------------------------------------------------------
+// EMPRESA (una sola fila, id='empresa')
+// ------------------------------------------------------------------
+function empresaVacia() {
+  return {
+    id: 'empresa', nombre: '', cuit: '', condicionFiscal: 'monotributista',
+    domicilio: '', localidad: '', telefono: '', email: '',
+    puntoVenta: 1, logo: null, createdAt: Date.now(), updatedAt: Date.now()
+  };
+}
+async function getEmpresa() {
+  try {
+    const e = await dbLocal.empresa.get('empresa');
+    return e ? Object.assign(empresaVacia(), e) : empresaVacia();
+  } catch (err) {
+    return empresaVacia();
+  }
+}
+async function guardarEmpresa(datos) {
+  const ahora = Date.now();
+  const e = Object.assign(await getEmpresa(), datos, {
+    id: 'empresa', updatedAt: ahora
+  });
+  if (!e.createdAt) e.createdAt = ahora;
+  await dbLocal.empresa.put(e);
+  await registrarOperacion({ tipo: 'upsert', tabla: 'empresa', row: empresaToRow(e) });
+  return e;
+}
 
 // ------------------------------------------------------------------
 // ESTABLECIMIENTOS (cada cliente/CUIT puede tener varios; cada uno con
@@ -1017,7 +1138,9 @@ async function crearFactura(datos, items) {
       const nuevo = {
         id: genId('fit'), facturaId: f.id, trabajoId: it.trabajoId || null,
         descripcion: it.descripcion || '', cantidad: parseFloat(it.cantidad) || 1,
-        precioUnit: numOVacio(it.precioUnit) ?? 0, createdAt: ahora
+        precioUnit: numOVacio(it.precioUnit) ?? 0,
+        iva: it.iva === undefined || it.iva === null || it.iva === '' ? null : parseFloat(it.iva),
+        createdAt: ahora
       };
       await dbLocal.factura_items.add(nuevo);
       ops.push({ tipo: 'upsert', tabla: 'factura_items', row: facturaItemToRow(nuevo), createdAt: ahora });
@@ -1128,18 +1251,18 @@ async function getVehiculo(id) { return dbLocal.vehiculos.get(id); }
 // ------------------------------------------------------------------
 async function armarRespaldo() {
   const [clientes, establecimientos, instalaciones, trabajos, trabajo_items, repuestos,
-         facturas, factura_items, gastos, vehiculos] = await Promise.all([
+         facturas, factura_items, gastos, vehiculos, empresa] = await Promise.all([
     dbLocal.clientes.toArray(), dbLocal.establecimientos.toArray(),
     dbLocal.instalaciones.toArray(),
     dbLocal.trabajos.toArray(), dbLocal.trabajo_items.toArray(),
     dbLocal.repuestos.toArray(), dbLocal.facturas.toArray(),
     dbLocal.factura_items.toArray(), dbLocal.gastos.toArray(),
-    dbLocal.vehiculos.toArray()
+    dbLocal.vehiculos.toArray(), getEmpresa()
   ]);
   return {
     app: 'MolineroApp', version: 2, exportado: new Date().toISOString(),
     clientes, establecimientos, instalaciones, trabajos, trabajo_items, repuestos,
-    facturas, factura_items, gastos, vehiculos
+    facturas, factura_items, gastos, vehiculos, empresa
   };
 }
 
@@ -1180,13 +1303,14 @@ async function importarRespaldo(objeto) {
   const factura_items = objeto.factura_items || [];
   const gastos        = objeto.gastos        || [];
   const vehiculos     = objeto.vehiculos     || [];
+  const empresa       = objeto.empresa && objeto.empresa.id ? objeto.empresa : null;
 
   const tablas = [dbLocal.clientes, dbLocal.establecimientos, dbLocal.instalaciones, dbLocal.trabajos,
                   dbLocal.trabajo_items, dbLocal.repuestos, dbLocal.facturas,
                   dbLocal.factura_items, dbLocal.gastos, dbLocal.vehiculos,
-                  dbLocal.pendientes];
+                  dbLocal.empresa, dbLocal.pendientes];
   await dbLocal.transaction('rw', ...tablas, async () => {
-    for (const t of tablas.slice(0, 10)) await t.clear();
+    for (const t of tablas.slice(0, 11)) await t.clear();
     await dbLocal.pendientes.clear();
     const cargas = [
       [dbLocal.clientes, clientes], [dbLocal.establecimientos, establecimientos],
@@ -1199,10 +1323,11 @@ async function importarRespaldo(objeto) {
     for (const [tabla, filas] of cargas) {
       if (filas.length) await tabla.bulkAdd(filas);
     }
+    if (empresa) await dbLocal.empresa.put(empresa);
     // La nube se reemplaza por completo, en orden de dependencias
     const ops = [];
     for (const t of ['factura_items', 'trabajo_items', 'gastos', 'facturas',
-                     'trabajos', 'instalaciones', 'establecimientos', 'repuestos', 'vehiculos', 'clientes']) {
+                     'trabajos', 'instalaciones', 'establecimientos', 'repuestos', 'vehiculos', 'clientes', 'empresa']) {
       ops.push({ tipo: 'clear', tabla: t, createdAt: ahora });
     }
     const conv = {
@@ -1211,7 +1336,7 @@ async function importarRespaldo(objeto) {
       trabajos: trabajoToRow, trabajo_items: trabajoItemToRow,
       repuestos: repuestoToRow, facturas: facturaToRow,
       factura_items: facturaItemToRow, gastos: gastoToRow,
-      vehiculos: vehiculoToRow
+      vehiculos: vehiculoToRow, empresa: empresaToRow
     };
     const datos = {
       clientes, establecimientos, instalaciones, trabajos, trabajo_items, repuestos,
@@ -1223,6 +1348,7 @@ async function importarRespaldo(objeto) {
         ops.push({ tipo: 'upsert', tabla: t, row: conv[t](fila), createdAt: ahora });
       }
     }
+    if (empresa) ops.push({ tipo: 'upsert', tabla: 'empresa', row: empresaToRow(empresa), createdAt: ahora });
     await dbLocal.pendientes.bulkAdd(ops);
   });
 

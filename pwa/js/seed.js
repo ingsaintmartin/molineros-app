@@ -6,8 +6,26 @@
    en la cola de sincronización y sube a la nube si hay conexión.
    ============================================================ */
 
+// Empresa de ejemplo: solo se carga si el usuario todavía no
+// configuró sus datos (así no pisa los datos reales).
+async function sembrarEmpresaDemoSiFalta() {
+  const empActual = await getEmpresa();
+  if (!empActual.nombre) {
+    await guardarEmpresa({
+      nombre: 'Molinero Demo',
+      cuit: '20-87654321-9',
+      condicionFiscal: 'monotributista',
+      domicilio: 'Ruta 29 km 12', localidad: 'General Belgrano',
+      telefono: '02223-550011', email: 'demo@molinero.com',
+      puntoVenta: 1
+    });
+  }
+}
+
 async function cargarDatosEjemplo() {
   const existentes = await getClientes();
+  // La empresa de ejemplo se asegura igual aunque ya exista el cliente (DEMO)
+  await sembrarEmpresaDemoSiFalta();
   if (existentes.some(c => /\(DEMO\)/i.test(c.nombre || ''))) {
     snack('Los datos de ejemplo ya están cargados');
     return false;
@@ -24,9 +42,13 @@ async function cargarDatosEjemplo() {
   const cli = await crearCliente({
     nombre: 'Estancia La Prueba (DEMO)',
     campo: 'La Prueba', localidad: 'General Belgrano',
-    telefono: '02223-440011',
+    telefono: '02223-440011', cuit: '20-12345678-9',
+    condicionFiscal: 'responsable_inscripto',
     observaciones: 'Cliente de prueba cargado automáticamente. Se puede borrar desde Más → datos.'
   });
+
+  // Empresa de ejemplo (solo si no hay una cargada)
+  await sembrarEmpresaDemoSiFalta();
 
   // Establecimientos: el mismo cliente/CUIT, cada uno con su contacto
   const casco = await crearEstablecimiento({
@@ -104,11 +126,13 @@ async function cargarDatosEjemplo() {
 
   // Factura del trabajo terminado (mano de obra + materiales + km)
   const totalTra1 = 5 * 18000 + (2 * 12500 + 4 * 4800) + 62 * 900;
+  const totDemo = totalesConIVA([{ cantidad: 1, precioUnit: totalTra1, iva: 21 }], 21);
   await crearFactura({
-    tipo: 'factura', clienteId: cli.id, fecha: hoy,
-    estado: 'pendiente', observaciones: 'Factura de ejemplo'
+    tipo: 'factura', letra: 'B', clienteId: cli.id, fecha: hoy,
+    estado: 'pendiente', observaciones: 'Factura de ejemplo',
+    subtotal: totDemo.total, neto: totDemo.neto, ivaMonto: totDemo.iva, total: totDemo.total
   }, [
-    { trabajoId: tra1.id, descripcion: 'Cambio de cueros y aletas — Molino Norte #1', cantidad: 1, precioUnit: totalTra1 }
+    { trabajoId: tra1.id, descripcion: 'Cambio de cueros y aletas — Molino Norte #1', cantidad: 1, precioUnit: totalTra1, iva: 21 }
   ]);
 
   // Gastos del trabajo
