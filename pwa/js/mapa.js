@@ -47,26 +47,45 @@ const Mapa = {
 
     const centro = tienePunto ? [lat, lng] : (markers.length ? [markers[0].lat, markers[0].lng] : [-35.5, -63.5]);
     const mapa = L.map(el, { scrollWheelZoom: false }).setView(centro, tienePunto || markers.length ? 14 : 6);
-    // Capa principal: OSM. Si sus baldosas fallan (red que la bloquea,
-    // DNS, etc.), se cambia sola a CARTO como respaldo.
+
+    // Vista satelital (Esri, sin API key): imagen + caminos + nombres.
+    // Ojo: Esri usa orden {z}/{y}/{x}.
+    const satelite = L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Imágenes &copy; <a href="https://www.esri.com">Esri</a>, Maxar, Earthstar Geographics'
+      }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 })
+    ]);
+
+    // Vista de calles: OSM, con respaldo automático a CARTO si OSM falla
+    // (algunas redes/DNS bloquean tile.openstreetmap.org).
     const capaOSM = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     });
-    const capaRespaldo = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    const capaCARTO = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
     });
+    const calles = L.layerGroup([capaOSM]);
     let erroresTiles = 0, conRespaldo = false;
     capaOSM.on('tileerror', () => {
       erroresTiles++;
       if (!conRespaldo && erroresTiles >= 4) {
         conRespaldo = true;
-        try { mapa.removeLayer(capaOSM); capaRespaldo.addTo(mapa); } catch (e) {}
+        try { calles.removeLayer(capaOSM); capaCARTO.addTo(calles); } catch (e) {}
       }
     });
-    capaOSM.addTo(mapa);
+
+    satelite.addTo(mapa);
+    L.control.layers(
+      { '🛰️ Satélite': satelite, '🗺️ Calles': calles },
+      null,
+      { position: 'topright' }
+    ).addTo(mapa);
     this._instancias.push(mapa);
 
     const puntos = [];
