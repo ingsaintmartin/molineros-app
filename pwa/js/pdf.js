@@ -32,6 +32,48 @@ function pdfAscii(s) {
   return out;
 }
 
+function base64ABytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// Dimensiones de un JPEG (busca el marcador SOF). Devuelve {w,h} o null.
+function jpegDims(bytes) {
+  if (!bytes || bytes.length < 10 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return null;
+  let i = 2;
+  while (i + 9 < bytes.length) {
+    if (bytes[i] !== 0xFF) { i++; continue; }
+    const m = bytes[i + 1];
+    if (m === 0xD8 || m === 0xD9 || m === 0x01) { i += 2; continue; }
+    if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) {
+      const h = (bytes[i + 5] << 8) | bytes[i + 6];
+      const w = (bytes[i + 7] << 8) | bytes[i + 8];
+      return (w > 0 && h > 0) ? { w: w, h: h } : null;
+    }
+    const len = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (len < 2) return null;
+    i += 2 + len;
+  }
+  return null;
+}
+
+// Extrae {bytes, w, h} del logo (dataURL JPEG) o null si no es usable
+function logoParaPDF(dataUrl) {
+  try {
+    if (!dataUrl || typeof dataUrl !== 'string') return null;
+    const m = dataUrl.match(/^data:image\/jpeg;base64,(.+)$/);
+    if (!m) return null;
+    const bytes = base64ABytes(m[1]);
+    const d = jpegDims(bytes);
+    if (!d) return null;
+    return { bytes: bytes, w: d.w, h: d.h };
+  } catch (e) {
+    return null;
+  }
+}
+
 // Corta un texto en líneas de hasta `maxChars` caracteres
 function pdfEnvolver(texto, maxChars) {
   const palabras = String(texto || '').split(/\s+/).filter(Boolean);
@@ -50,11 +92,13 @@ function pdfEnvolver(texto, maxChars) {
 }
 
 /* doc = {
-     titulo: 'PRESUPUESTO', numero: '0001', fecha: '01/10/2026',
+     titulo: 'FACTURA B', numero: '0001', fecha: '01/10/2026',
      estado: 'pendiente',
-     cliente: { nombre, localidad, telefono, cuit },
+     empresa: { nombre, cuit, condicionFiscal, domicilio, localidad,
+                telefono, email, logo (dataURL JPEG) },
+     cliente: { nombre, localidad, telefono, cuit, condicionFiscal },
      items: [{ cantidad, descripcion, precioUnit }],
-     total, observaciones, pie
+     neto, iva, total, observaciones, pie
    }
    Devuelve Blob application/pdf. */
 function generarPDF(doc) {
@@ -62,6 +106,8 @@ function generarPDF(doc) {
   const bytes = [];
   const offsets = [0];
   const push = (arr) => { offsets.push(bytes.length); for (const b of arr) bytes.push(b); };
+
+  const logo = logoParaPDF(doc.empresa && doc.empresa.logo);
 
   const paginas = []; // cada una: array de comandos (arrays de bytes)
   let cmds = [];
@@ -90,6 +136,34 @@ function generarPDF(doc) {
 
   // ---- Contenido ----
   nuevaPagina();
+
+  // Encabezado de la empresa (logo + datos fiscales)
+  const emp = doc.empresa || {};
+  let xTexto = MARGEN;
+  let logoH = 0;
+  if (logo) {
+    const escala = Math.min(110 / logo.w, 64 / logo.h, 1);
+    const lw = logo.w * escala, lh = logo.h * escala;
+    logoH = lh;
+    cmds.push(pdfAscii('q ' + lw.toFixed(1) + ' 0 0 ' + lh.toFixed(1) + ' ' +
+      MARGEN.toFixed(1) + ' ' + (y - lh).toFixed(1) + ' cm /ImLogo Do Q\n'));
+    xTexto = MARGEN + lw + 12;
+  }
+  if (emp.nombre) {
+    linea(emp.nombre, xTexto, 14, true);
+    const fisc = [emp.cuit ? 'CUIT ' + emp.cuit : null,
+      emp.condicionFiscal ? emp.condicionFiscal : null].filter(Boolean).join(' · ');
+    if (fisc) linea(fisc, xTexto, 10, false);
+    const dom = [emp.domicilio, emp.localidad].filter(Boolean).join(' — ');
+    if (dom) linea(dom, xTexto, 10, false);
+    const tel = [emp.telefono, emp.email].filter(Boolean).join(' · ');
+    if (tel) linea(tel, xTexto, 10, false);
+  }
+  if (logoH > 0) y = Math.min(y, ALTO - MARGEN - logoH - 8);
+  espacio(4);
+  regla();
+  espacio(4);
+
   const titulo = (doc.titulo || 'DOCUMENTO').toUpperCase();
   linea(titulo + ' Nº ' + (doc.numero || '—'), MARGEN, 18, true);
   espacio(2);
@@ -100,9 +174,10 @@ function generarPDF(doc) {
   espacio(4);
   const cli = doc.cliente || {};
   linea('Cliente: ' + (cli.nombre || '—'), MARGEN, 12, true);
+  if (cli.condicionFiscal) linea('Cond. fiscal: ' + cli.condicionFiscal, MARGEN, 10, false);
   if (cli.localidad) linea('Localidad: ' + cli.localidad, MARGEN, 10, false);
   if (cli.telefono) linea('Teléfono: ' + cli.telefono, MARGEN, 10, false);
-  if (cli.cuit) linea('CUIT: ' + cli.cuit, MARGEN, 10, false);
+  if (cli.cuit) linea('CUIT/DNI: ' + cli.cuit, MARGEN, 10, false);
   espacio(6);
   regla();
   espacio(4);
@@ -145,6 +220,12 @@ function generarPDF(doc) {
   espacio(4);
   regla();
   espacio(2);
+  if (doc.neto !== undefined && doc.neto !== null) {
+    tb2('Neto: ' + formatoPesoPDF(doc.neto), xPU - 40, 11, false);
+    y -= 11 * 1.35;
+    tb2('IVA: ' + formatoPesoPDF(doc.iva || 0), xPU - 40, 11, false);
+    y -= 11 * 1.35;
+  }
   tb2('TOTAL: ' + formatoPesoPDF(doc.total || 0), xPU - 40, 13, true);
   y -= 13 * 1.35;
   espacio(8);
@@ -159,11 +240,14 @@ function generarPDF(doc) {
 
   // ---- Estructura PDF ----
   const nPag = paginas.length;
-  // 1: catálogo, 2: páginas, 3..3+nPag-1: páginas, luego fuentes y contenidos
+  // 1: catálogo, 2: páginas, 3..3+nPag-1: páginas, luego fuentes,
+  // imagen del logo (si hay) y contenidos
   const idCatalogo = 1, idPaginas = 2;
   const idFuente1 = 3 + nPag, idFuente2 = 4 + nPag;
+  const idImagen = logo ? 5 + nPag : null;
+  const baseContenido = logo ? 6 + nPag : 5 + nPag;
   const idsContenido = [];
-  for (let k = 0; k < nPag; k++) idsContenido.push(5 + nPag + k);
+  for (let k = 0; k < nPag; k++) idsContenido.push(baseContenido + k);
 
   for (const b of pdfAscii('%PDF-1.4\n')) bytes.push(b);
   push(pdfAscii(idCatalogo + ' 0 obj\n<< /Type /Catalog /Pages ' + idPaginas + ' 0 R >>\nendobj\n'));
@@ -172,13 +256,22 @@ function generarPDF(doc) {
   push(pdfAscii(idPaginas + ' 0 obj\n<< /Type /Pages /Kids [' + kids.join(' ') +
     '] /Count ' + nPag + ' >>\nendobj\n'));
   for (let k = 0; k < nPag; k++) {
+    const xobj = logo ? ' /XObject << /ImLogo ' + idImagen + ' 0 R >>' : '';
     push(pdfAscii((3 + k) + ' 0 obj\n<< /Type /Page /Parent ' + idPaginas + ' 0 R ' +
       '/MediaBox [0 0 ' + ANCHO + ' ' + ALTO + '] ' +
-      '/Resources << /Font << /F1 ' + idFuente1 + ' 0 R /F2 ' + idFuente2 + ' 0 R >> >> ' +
+      '/Resources << /Font << /F1 ' + idFuente1 + ' 0 R /F2 ' + idFuente2 + ' 0 R >>' + xobj + ' >> ' +
       '/Contents ' + idsContenido[k] + ' 0 R >>\nendobj\n'));
   }
   push(pdfAscii(idFuente1 + ' 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n'));
   push(pdfAscii(idFuente2 + ' 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n'));
+  if (logo) {
+    push(pdfAscii(idImagen + ' 0 obj\n<< /Type /XObject /Subtype /Image ' +
+      '/Width ' + logo.w + ' /Height ' + logo.h + ' /ColorSpace /DeviceRGB ' +
+      '/BitsPerComponent 8 /Filter /DCTDecode /Length ' + logo.bytes.length + ' >>\nstream\n'));
+    for (const b of logo.bytes) bytes.push(b);
+    const finImg = pdfAscii('\nendstream\nendobj\n');
+    for (const b of finImg) bytes.push(b);
+  }
   for (let k = 0; k < nPag; k++) {
     const contenido = [];
     for (const c of paginas[k]) for (const b of c) contenido.push(b);
@@ -208,38 +301,59 @@ function formatoPesoPDF(n) {
   return '$ ' + v.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-// Arma el PDF de un documento (factura/presupuesto/recibo) y lo comparte:
-// en el celular abre la hoja de compartir (WhatsApp, email, etc.);
-// donde no hay hoja de compartir, lo descarga.
-async function compartirDocumentoPDF(id) {
+// Arma el PDF de un documento y devuelve { blob, nombreArchivo, titulo }.
+// Devuelve null si el documento no existe (ya muestra el aviso).
+async function generarDocumentoPDFBlob(id) {
   const f = await getFactura(id);
-  if (!f) { snack('Documento no encontrado.'); return; }
+  if (!f) { snack('Documento no encontrado.'); return null; }
   const items = await getItemsDeFactura(id);
   const cli = f.clienteId ? await getCliente(f.clienteId) : null;
-  const tipoDoc = nombreTipoDoc(f.tipo);
+  const empresa = await getEmpresa();
+  const tipoDoc = nombreTipoDoc(f.tipo) + ((f.tipo === 'factura' && f.letra) ? ' ' + f.letra : '');
+  const tot = (f.neto !== null && f.neto !== undefined)
+    ? { total: f.total, neto: f.neto, iva: f.ivaMonto || 0 }
+    : totalesConIVA(items, 21);
   const blob = generarPDF({
     titulo: tipoDoc,
     numero: f.numero || '—',
     fecha: fechaLegible(f.fecha) || '—',
     estado: (typeof ESTADOS_FACTURA !== 'undefined' && ESTADOS_FACTURA[f.estado]) || f.estado || '',
+    empresa: {
+      nombre: empresa.nombre, cuit: empresa.cuit,
+      condicionFiscal: nombreCondicionFiscal(empresa.condicionFiscal),
+      domicilio: empresa.domicilio, localidad: empresa.localidad,
+      telefono: empresa.telefono, email: empresa.email,
+      logo: empresa.logo
+    },
     cliente: cli ? {
       nombre: cli.nombre, localidad: cli.localidad,
-      telefono: cli.telefono, cuit: cli.cuit
+      telefono: cli.telefono, cuit: cli.cuit,
+      condicionFiscal: nombreCondicionFiscal(cli.condicionFiscal)
     } : {},
     items: items.map(it => ({
       cantidad: it.cantidad, descripcion: it.descripcion, precioUnit: it.precioUnit
     })),
-    total: f.total || 0,
+    neto: tot.neto, iva: tot.iva, total: tot.total,
     observaciones: f.observaciones || ''
   });
   const nombreArchivo = (f.tipo || 'documento') + '_' + (f.numero || id) + '.pdf';
+  return { blob: blob, nombreArchivo: nombreArchivo, titulo: tipoDoc + ' Nº ' + (f.numero || '') };
+}
+
+// Comparte el PDF: en el celular abre la hoja de compartir
+// (WhatsApp, email, etc.); donde no hay hoja de compartir, lo descarga.
+async function compartirDocumentoPDF(id) {
+  const doc = await generarDocumentoPDFBlob(id);
+  if (!doc) return;
+  const f = await getFactura(id);
+  const cli = f.clienteId ? await getCliente(f.clienteId) : null;
   try {
-    const archivo = new File([blob], nombreArchivo, { type: 'application/pdf' });
+    const archivo = new File([doc.blob], doc.nombreArchivo, { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
       await navigator.share({
         files: [archivo],
-        title: tipoDoc + ' Nº ' + (f.numero || ''),
-        text: tipoDoc + ' Nº ' + (f.numero || '') + ' — ' + (cli ? cli.nombre : '')
+        title: doc.titulo,
+        text: doc.titulo + ' — ' + (cli ? cli.nombre : '')
       });
       return;
     }
@@ -247,7 +361,17 @@ async function compartirDocumentoPDF(id) {
     // Si el usuario cancela la hoja de compartir, no hacemos nada
     if (e && e.name === 'AbortError') return;
   }
-  // Sin hoja de compartir: descargar el PDF
+  descargarBlobPDF(doc.blob, doc.nombreArchivo);
+}
+
+// Descarga directa del PDF (para imprimir o guardar el archivo).
+async function descargarDocumentoPDF(id) {
+  const doc = await generarDocumentoPDFBlob(id);
+  if (!doc) return;
+  descargarBlobPDF(doc.blob, doc.nombreArchivo);
+}
+
+function descargarBlobPDF(blob, nombreArchivo) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

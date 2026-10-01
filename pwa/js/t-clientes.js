@@ -155,7 +155,8 @@ async function renderClienteDetalle(id) {
     const tel = String(c.telefono).replace(/[^+\d]/g, '');
     h += '<div class="dato"><span class="k">Teléfono</span><span class="v"><a href="tel:' + esc(tel) + '">' + esc(c.telefono) + '</a></span></div>';
   }
-  if (c.cuit) h += '<div class="dato"><span class="k">CUIT</span><span class="v">' + esc(c.cuit) + '</span></div>';
+  if (c.cuit) h += '<div class="dato"><span class="k">CUIT / DNI</span><span class="v">' + esc(c.cuit) + '</span></div>';
+  if (c.condicionFiscal) h += '<div class="dato"><span class="k">Cond. fiscal</span><span class="v">' + esc(nombreCondicionFiscal(c.condicionFiscal)) + '</span></div>';
   if (c.email) h += '<div class="dato"><span class="k">Email</span><span class="v">' + esc(c.email) + '</span></div>';
   if (c.observaciones) h += '<div class="dato"><span class="k">Observaciones</span><span class="v pre">' + esc(c.observaciones) + '</span></div>';
   h += '</div>';
@@ -258,7 +259,8 @@ async function renderClienteForm(id) {
   h += campo('text', 'clif-campo', 'Campo / establecimiento', c ? c.campo : '', {});
   h += campo('text', 'clif-localidad', 'Localidad', c ? c.localidad : '', {});
   h += campo('tel', 'clif-tel', 'Teléfono', c ? c.telefono : '', {});
-  h += campo('text', 'clif-cuit', 'CUIT', c ? c.cuit : '', {});
+  h += campo('text', 'clif-cuit', 'CUIT / DNI', c ? c.cuit : '', {});
+  h += campoSelect('clif-cond', 'Condición fiscal', Object.keys(CONDICIONES_FISCALES).map(k => ({ value: k, texto: CONDICIONES_FISCALES[k] })), c ? c.condicionFiscal : '');
   h += campo('email', 'clif-email', 'Email', c ? c.email : '', {});
   h += campoTexto('clif-obs', 'Observaciones', c ? c.observaciones : '', {});
   h += '</div></div>';
@@ -275,6 +277,7 @@ function bindClienteForm(id) {
       nombre: nombre,
       campo: val('clif-campo'), localidad: val('clif-localidad'),
       telefono: val('clif-tel'), cuit: val('clif-cuit'),
+      condicionFiscal: val('clif-cond') || null,
       email: val('clif-email'), observaciones: val('clif-obs')
     };
     let nuevoId = id;
