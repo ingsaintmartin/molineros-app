@@ -167,8 +167,9 @@ button.fila:active { background: var(--v50); }
 .chip.a_hacer    { background: var(--ambar-bg); color: var(--ambar-dark); }
 .chip.terminado  { background: var(--azul-bg); color: var(--azul); }
 .chip.facturado  { background: var(--lila-bg); color: var(--lila); }
-.chip.cobrado, .chip.pagada, .chip.operativo { background: var(--ok-bg); color: var(--ok); }
+.chip.cobrado, .chip.pagada, .chip.operativo, .chip.aceptado { background: var(--ok-bg); color: var(--ok); }
 .chip.pendiente  { background: var(--ambar-bg); color: var(--ambar-dark); }
+.chip.rechazado, .chip.anulada, .chip.vencida { background: var(--peligro-bg); color: var(--peligro); }
 .chip.fuera      { background: var(--peligro-bg); color: var(--peligro); }
 .chip.mantenimiento { background: var(--ambar-bg); color: var(--ambar-dark); }
 .chip.anulada, .chip.vencida { background: #eee; color: var(--muted); }

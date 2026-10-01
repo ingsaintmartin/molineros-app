@@ -1,0 +1,70 @@
+/* Tests de integración UI: empresa, condición fiscal, letra e IVA.
+   node test-empresa-ui.js */
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const RAIZ = path.join(__dirname, 'pwa');
+const leer = (r) => fs.readFileSync(path.join(RAIZ, r), 'utf8');
+let ok = 0, mal = 0;
+function t(nombre, cond) {
+  if (cond) { ok++; console.log('  ok  ' + nombre); }
+  else { mal++; console.log('  MAL ' + nombre); }
+}
+
+const empresa = leer('js/t-empresa.js');
+t('Pantallas.empresa definida', /Pantallas\.empresa\s*=/.test(empresa));
+t('empresa render + bind', /async render\(\)/.test(empresa) && /async bind\(\)/.test(empresa));
+t('form: nombre/cuit/condición/domicilio', /emp-nombre/.test(empresa) && /emp-cuit/.test(empresa) && /emp-cond/.test(empresa) && /emp-dom/.test(empresa));
+t('form: punto de venta', /emp-pv/.test(empresa));
+t('logo: cargar con procesarFoto', /emp-logo-input/.test(empresa) && /procesarFoto/.test(empresa));
+t('guarda con guardarEmpresa', /guardarEmpresa/.test(empresa));
+t('usa CONDICIONES_FISCALES', /CONDICIONES_FISCALES/.test(empresa));
+
+const index = leer('index.html');
+t('Pestaña inferior Empresa', /data-tab="empresa"/.test(index));
+t('script t-empresa.js incluido', /js\/t-empresa\.js/.test(index));
+
+const cli = leer('js/t-clientes.js');
+t('cliente form: select condición fiscal', /clif-cond/.test(cli));
+t('cliente guarda condicionFiscal', /condicionFiscal: val\('clif-cond'\)/.test(cli));
+t('cliente detalle muestra cond. fiscal', /nombreCondicionFiscal\(c\.condicionFiscal\)/.test(cli));
+
+const fac = leer('js/t-facturacion.js');
+t('factura form: select letra', /facLetra/.test(fac) && /facLetraWrap/.test(fac));
+t('letra visible solo en facturas', /tipoSel\.value === 'factura'/.test(fac));
+t('letra sugerida por empresa', /letraSugerida\(empresa\.condicionFiscal\)/.test(fac));
+t('ítem: select IVA', /data-f-iva/.test(fac) && /facIvaOptionsHTML/.test(fac));
+t('ítem lee iva', /parseFloat\(ivaSel\.value\)/.test(fac));
+t('totales Neto/IVA/Total', /facNeto/.test(fac) && /facIva/.test(fac) && /facTotal/.test(fac));
+t('usa totalesConIVA', /totalesConIVA\(/.test(fac));
+t('guarda letra/neto/ivaMonto', /datos\.neto = tot\.neto/.test(fac) && /datos\.ivaMonto = tot\.iva/.test(fac));
+t('detalle: título con letra', /nombreTipoDoc\(f\.tipo\) \+ \(\(f\.tipo === 'factura' && f\.letra\)/.test(fac));
+t('detalle: discrimina neto/IVA', /totalesConIVA\(items, 21\)/.test(fac));
+t('lista: letra en la fila', /const letra = \(f\.tipo === 'factura' && f\.letra\)/.test(fac));
+t('pasar a factura: letra sugerida + iva', /letra: letraSugerida\(empresa\.condicionFiscal\)/.test(fac));
+t('pasar a factura: copia iva de ítems', /precioUnit: it\.precioUnit, iva: it\.iva/.test(fac));
+t('estados presupuesto: aceptado/rechazado', /'aceptado', 'rechazado'/.test(fac) && /f\.tipo === 'presupuesto'/.test(fac));
+t('detalle: botón Descargar PDF', /data-descargar-pdf/.test(fac) && /descargarDocumentoPDF\(id\)/.test(fac));
+
+const pdf = leer('js/pdf.js');
+t('pdf: encabezado empresa', /doc\.empresa/.test(pdf));
+t('pdf: incrusta logo JPEG', /\/ImLogo/.test(pdf) && /DCTDecode/.test(pdf));
+t('pdf: jpegDims', /function jpegDims/.test(pdf));
+t('pdf: cliente con cond. fiscal', /cli\.condicionFiscal/.test(pdf));
+t('pdf: discrimina neto/IVA', /Neto: /.test(pdf) && /IVA: /.test(pdf));
+t('compartir: pasa empresa y totales', /empresa: \{/.test(pdf) && /neto: tot\.neto/.test(pdf));
+
+const idx = leer('index.html');
+t('index.html carga t-empresa.js', idx.includes('js/t-empresa.js'));
+
+const sw = leer('service-worker.js');
+t('SW v15', sw.includes('molineroapp-v15'));
+t('SW precachea t-empresa.js', sw.includes("'./js/t-empresa.js'"));
+
+const seed = leer('js/seed.js');
+t('seed: empresa demo', /guardarEmpresa/.test(seed));
+t('seed: cliente demo con condición fiscal', /condicionFiscal: 'responsable_inscripto'/.test(seed));
+t('seed: factura demo con letra B e IVA', /letra: 'B'/.test(seed) && /iva: 21/.test(seed));
+
+console.log('\n' + ok + ' ok, ' + mal + ' mal');
+process.exit(mal ? 1 : 0);
