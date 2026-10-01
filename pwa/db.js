@@ -278,6 +278,7 @@ function trabajoToRow(t) {
     monto_manual: numOVacio(t.montoManual),
     estado: t.estado || 'a_hacer', observaciones: t.observaciones || null,
     fotos: JSON.stringify(t.fotos || []),
+    presupuesto_id: t.presupuestoId || null,
     created_at: t.createdAt || Date.now(), updated_at: t.updatedAt || Date.now()
   };
 }
@@ -292,6 +293,7 @@ function rowToTrabajo(r) {
     montoManual: r.monto_manual ?? null,
     estado: r.estado || 'a_hacer', observaciones: r.observaciones || '',
     fotos: jsonFromDb(r.fotos, []),
+    presupuestoId: r.presupuesto_id || null,
     createdAt: r.created_at, updatedAt: r.updated_at
   };
 }
@@ -337,6 +339,7 @@ function facturaToRow(f) {
     fecha: f.fecha || null, estado: f.estado || 'pendiente',
     subtotal: numOVacio(f.subtotal) ?? 0, neto: numOVacio(f.neto),
     iva_monto: numOVacio(f.ivaMonto), total: numOVacio(f.total) ?? 0,
+    iva_incluido: f.ivaIncluido === false ? 0 : 1,
     observaciones: f.observaciones || null,
     created_at: f.createdAt || Date.now(), updated_at: f.updatedAt || Date.now()
   };
@@ -347,7 +350,7 @@ function rowToFactura(r) {
     tipo: r.tipo || 'factura', letra: r.letra || '',
     fecha: r.fecha || '', estado: r.estado || 'pendiente',
     subtotal: r.subtotal ?? 0, neto: r.neto ?? null, ivaMonto: r.iva_monto ?? null,
-    total: r.total ?? 0,
+    total: r.total ?? 0, ivaIncluido: r.iva_incluido === 0 ? false : true,
     observaciones: r.observaciones || '',
     createdAt: r.created_at, updatedAt: r.updated_at
   };
@@ -436,20 +439,31 @@ function letraSugerida(condicionEmpresa) {
   if (condicionEmpresa === 'responsable_inscripto') return 'B';
   return 'C'; // monotributista / exento → C
 }
-// Totales de un conjunto de ítems {cantidad, precioUnit, iva}
-// (precio con IVA incluido). Devuelve {total, neto, iva}.
-function totalesConIVA(items, ivaDefault) {
-  let total = 0, neto = 0;
+// Totales de un conjunto de ítems {cantidad, precioUnit, iva}.
+// ivaIncluido=true (por defecto): el precio ya trae el IVA adentro y se
+// discrimina el neto. ivaIncluido=false: el precio es neto y el IVA se suma.
+// Devuelve {total, neto, iva}.
+function totalesConIVA(items, ivaDefault, ivaIncluido) {
+  const conIVA = ivaIncluido !== false;
+  let total = 0, neto = 0, iva = 0;
   for (const it of items || []) {
     const t = (parseFloat(it.cantidad) || 0) * (parseFloat(it.precioUnit) || 0);
-    total += t;
     const alic = (it.iva === null || it.iva === undefined || it.iva === '')
       ? ivaDefault : parseFloat(it.iva);
-    neto += discriminarIVA(t, alic).neto;
+    if (conIVA) {
+      total += t;
+      neto += discriminarIVA(t, alic).neto;
+    } else {
+      neto += t;
+      iva += t * (alic / 100);
+    }
   }
-  total = Math.round(total * 100) / 100;
+  total = Math.round(((conIVA ? total : neto + iva)) * 100) / 100;
   neto = Math.round(neto * 100) / 100;
-  return { total: total, neto: neto, iva: Math.round((total - neto) * 100) / 100 };
+  iva = conIVA
+    ? Math.round((total - neto) * 100) / 100
+    : Math.round(iva * 100) / 100;
+  return { total: total, neto: neto, iva: iva };
 }
 
 function empresaToRow(e) {
@@ -489,11 +503,11 @@ const COLUMNAS = {
                   'estado', 'observaciones', 'lat', 'lng', 'fotos', 'created_at', 'updated_at'],
   trabajos:      ['id', 'instalacion_id', 'cliente_id', 'fecha', 'descripcion', 'tareas', 'piezas_texto',
                   'horas', 'tarifa_hora', 'km', 'costo_km', 'monto_manual',
-                  'estado', 'observaciones', 'fotos', 'created_at', 'updated_at'],
+                  'estado', 'observaciones', 'fotos', 'presupuesto_id', 'created_at', 'updated_at'],
   trabajo_items: ['id', 'trabajo_id', 'repuesto_id', 'descripcion', 'cantidad', 'costo_unit', 'precio_unit', 'created_at'],
   repuestos:     ['id', 'nombre', 'categoria', 'stock', 'stock_min', 'costo', 'precio', 'created_at', 'updated_at'],
   facturas:      ['id', 'cliente_id', 'numero', 'tipo', 'letra', 'fecha', 'estado', 'subtotal', 'neto', 'iva_monto', 'total',
-                  'observaciones', 'created_at', 'updated_at'],
+                  'iva_incluido', 'observaciones', 'created_at', 'updated_at'],
   factura_items: ['id', 'factura_id', 'trabajo_id', 'descripcion', 'cantidad', 'precio_unit', 'iva', 'created_at'],
   gastos:        ['id', 'fecha', 'categoria', 'descripcion', 'monto', 'trabajo_id', 'vehiculo_id', 'created_at'],
   vehiculos:     ['id', 'nombre', 'patente', 'km_actual', 'costo_km', 'observaciones', 'created_at'],
@@ -524,7 +538,7 @@ const TURSO_DDL = [
      id TEXT PRIMARY KEY, instalacion_id TEXT, cliente_id TEXT, fecha TEXT,
      descripcion TEXT, tareas TEXT, piezas_texto TEXT, horas REAL,
      tarifa_hora REAL, km REAL, costo_km REAL, monto_manual REAL,
-     estado TEXT, observaciones TEXT, fotos TEXT,
+     estado TEXT, observaciones TEXT, fotos TEXT, presupuesto_id TEXT,
      created_at INTEGER, updated_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS trabajo_items (
      id TEXT PRIMARY KEY, trabajo_id TEXT, repuesto_id TEXT,
@@ -537,7 +551,7 @@ const TURSO_DDL = [
   `CREATE TABLE IF NOT EXISTS facturas (
      id TEXT PRIMARY KEY, cliente_id TEXT, numero TEXT, tipo TEXT,
      letra TEXT, fecha TEXT, estado TEXT, subtotal REAL, neto REAL,
-     iva_monto REAL, total REAL,
+     iva_monto REAL, total REAL, iva_incluido INTEGER,
      observaciones TEXT, created_at INTEGER, updated_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS factura_items (
      id TEXT PRIMARY KEY, factura_id TEXT, trabajo_id TEXT,
@@ -561,6 +575,8 @@ const TURSO_DDL = [
   `ALTER TABLE facturas ADD COLUMN iva_monto REAL`,
   `ALTER TABLE factura_items ADD COLUMN iva REAL`,
   `ALTER TABLE instalaciones ADD COLUMN establecimiento_id TEXT`,
+  `ALTER TABLE trabajos ADD COLUMN presupuesto_id TEXT`,
+  `ALTER TABLE facturas ADD COLUMN iva_incluido INTEGER`,
   `CREATE INDEX IF NOT EXISTS idx_ins_cliente ON instalaciones(cliente_id)`,
   `CREATE INDEX IF NOT EXISTS idx_ins_est ON instalaciones(establecimiento_id)`,
   `CREATE INDEX IF NOT EXISTS idx_est_cli ON establecimientos(cliente_id)`,
@@ -788,7 +804,7 @@ async function eliminarCliente(clienteId) {
         await dbLocal.gastos.where('trabajoId').anyOf(idsTrab).delete();
 
         // Los ítems de factura conservan la historia: se desvinculan del trabajo
-        const fi = await dbLocal.factura_items.where('trabajoId').anyOf(idsTrab).toArray();
+        const fi = await dbLocal.factura_items.filter(x => idsTrab.includes(x.trabajoId)).toArray(); // trabajoId no es índice (ver PR #10)
         for (const f of fi) {
           const copia = Object.assign({}, f, { trabajoId: null });
           await dbLocal.factura_items.put(copia);
@@ -927,7 +943,7 @@ async function eliminarInstalacion(instId) {
         const gastos = await dbLocal.gastos.where('trabajoId').anyOf(idsTrab).toArray();
         for (const g of gastos) ops.push({ tipo: 'delete', tabla: 'gastos', id: g.id, createdAt: ahora });
         await dbLocal.gastos.where('trabajoId').anyOf(idsTrab).delete();
-        const fi = await dbLocal.factura_items.where('trabajoId').anyOf(idsTrab).toArray();
+        const fi = await dbLocal.factura_items.filter(x => idsTrab.includes(x.trabajoId)).toArray(); // trabajoId no es índice (ver PR #10)
         for (const f of fi) {
           const copia = Object.assign({}, f, { trabajoId: null });
           await dbLocal.factura_items.put(copia);
@@ -967,6 +983,39 @@ async function actualizarTrabajo(datos) {
   return datos;
 }
 
+// Órdenes de trabajo vinculadas a un presupuesto (presupuesto_id no es índice)
+async function getTrabajosDePresupuesto(presupuestoId) {
+  if (!presupuestoId) return [];
+  return dbLocal.trabajos.filter(t => t.presupuestoId === presupuestoId).toArray();
+}
+
+// Crea la orden de trabajo de un presupuesto aceptado. Idempotente: si ya
+// existe una, la devuelve sin crear duplicados. La orden nace como un trabajo
+// normal y totalmente editable (tareas, instalación, fechas, etc.).
+async function crearTrabajoDesdePresupuesto(presId) {
+  const existentes = await getTrabajosDePresupuesto(presId);
+  if (existentes.length) return existentes[0];
+  const f = await getFactura(presId);
+  if (!f) return null;
+  const items = await getItemsDeFactura(presId);
+  const tareas = (items || []).map(it => {
+    const c = parseFloat(it.cantidad) || 0;
+    const cTxt = (Math.round(c) === c) ? String(c) : String(Math.round(c * 100) / 100);
+    return cTxt + ' × ' + (it.descripcion || 'Ítem');
+  });
+  const t = await crearTrabajo({
+    clienteId: f.clienteId || null,
+    instalacionId: null,
+    fecha: hoyISO(),
+    descripcion: 'Orden de trabajo · Presupuesto Nº ' + (f.numero || ''),
+    tareas: tareas,
+    estado: 'a_hacer',
+    observaciones: (f.observaciones || ''),
+    presupuestoId: presId
+  });
+  return t;
+}
+
 async function eliminarTrabajo(trabajoId) {
   const ahora = Date.now();
   const ops = [];
@@ -993,7 +1042,8 @@ async function eliminarTrabajo(trabajoId) {
       for (const g of gastos) ops.push({ tipo: 'delete', tabla: 'gastos', id: g.id, createdAt: ahora });
       await dbLocal.gastos.where('trabajoId').equals(trabajoId).delete();
 
-      const fi = await dbLocal.factura_items.where('trabajoId').equals(trabajoId).toArray();
+      // trabajoId no es índice en factura_items: filtrar en memoria (ver PR #10)
+      const fi = await dbLocal.factura_items.filter(x => x.trabajoId === trabajoId).toArray();
       for (const f of fi) {
         const copia = Object.assign({}, f, { trabajoId: null });
         await dbLocal.factura_items.put(copia);
