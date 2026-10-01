@@ -69,12 +69,15 @@ const idx = leer('index.html');
 t('index.html carga t-empresa.js', idx.includes('js/t-empresa.js'));
 
 const sw = leer('service-worker.js');
-t('SW v17', sw.includes('molineroapp-v17'));
+t('SW v18', sw.includes('molineroapp-v18'));
 t('SW precachea t-empresa.js', sw.includes("'./js/t-empresa.js'"));
 
 const tra = leer('js/t-trabajos.js');
 t('trabajo detalle: link al presupuesto', /data-go-presupuesto/.test(tra));
 t('trabajo form: preserva presupuestoId', /traPresupuestoId/.test(tra) && /datos\.presupuestoId/.test(tra));
+t('trabajo form: litros y precio por litro', /traLitros/.test(tra) && /traPrecioLitro/.test(tra));
+t('trabajo detalle: viaje por combustible', /l × /.test(tra));
+t('trabajo detalle: monto manual según presupuesto', /según presupuesto/.test(tra));
 
 const db = leer('db.js');
 t('db: crearTrabajoDesdePresupuesto', /async function crearTrabajoDesdePresupuesto/.test(db));
