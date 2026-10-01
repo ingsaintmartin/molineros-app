@@ -101,6 +101,8 @@ const api = vm.runInContext('({ dbLocal, crearCliente, guardarEmpresa, crearFact
     { cantidad: 1, precioUnit: 2000, tipoConcepto: 'traslado' }
   ]);
   assert.equal(acordado.ingresos, 12000, 'no suma horas ni viaje sobre los mismos conceptos acordados');
+  assert.deepEqual(JSON.parse(JSON.stringify(acordado.preciosPorConcepto)),
+    { material: 0, servicio: 10000, traslado: 2000, viatico: 0 }, 'una revisión se contabiliza como servicio, no como material');
   const repuesto = await a.crearRepuesto({ nombre: 'Cuero stock', stock: 5, costo: 500, precio: 2000 });
   const ordenStock = await a.guardarTrabajoConItems({ clienteId: cliente.id, descripcion: 'Preparar visita', estado: 'a_hacer' },
     [{ repuestoId: repuesto.id, descripcion: 'Cuero stock', cantidad: 2, precioUnit: 2000, costoUnit: 500 }]);

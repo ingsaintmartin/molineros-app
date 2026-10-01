@@ -803,10 +803,13 @@ function nombreMes(iso) {
 function totalesTrabajo(t, items, vehiculo, gastos) {
   items = items || [];
   let matCosto = 0, matPrecio = 0;
+  const preciosPorConcepto = { material: 0, servicio: 0, traslado: 0, viatico: 0 };
   for (const it of items) {
     const c = it.cantidad || 0;
     matCosto  += c * (parseFloat(it.costoUnit)  || 0);
     matPrecio += c * (parseFloat(it.precioUnit) || 0);
+    const tipo = Object.hasOwn(preciosPorConcepto, it.tipoConcepto) ? it.tipoConcepto : 'material';
+    preciosPorConcepto[tipo] += c * (parseFloat(it.precioUnit) || 0);
   }
   const manoObra = items.some(it => it.tipoConcepto === 'servicio') ? 0 :
     (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
@@ -836,7 +839,7 @@ function totalesTrabajo(t, items, vehiculo, gastos) {
     .reduce((s, g) => s + (Number(g.monto) || 0), 0);
   const costos   = matCosto + viajeCosto + gastosDirectos;
   return {
-    materialesCosto: matCosto, materialesPrecio: matPrecio,
+    materialesCosto: matCosto, materialesPrecio: matPrecio, preciosPorConcepto,
     manoObra: manoObra, viaje: viajeCobrado, viajeCosto: viajeCosto, manual: manual, gastosDirectos,
     ingresos: ingresos, totalVenta: venta.total, costos: costos, margen: ingresos - costos,
     margenPct: ingresos > 0 ? (ingresos - costos) / ingresos * 100 : 0

@@ -339,6 +339,7 @@ function facIvaOptionsHTML(sel) {
 
 function facItemRowHTML(it) {
   it = it || {};
+  const tipoConcepto = it.tipoConcepto || (it.descripcion ? 'material' : 'servicio');
   const ivaSel = (it.iva !== null && it.iva !== undefined && it.iva !== '') ? it.iva : 21;
   return '<div class="item-dinamico"' + (it.trabajoId ? ' data-trabajo-id="' + esc(it.trabajoId) + '"' : '') + '><div class="grid">' +
     '<div class="con-micro"><input type="text" data-f-desc placeholder="Descripción" value="' + esc(it.descripcion || '') + '" />' +
@@ -349,7 +350,7 @@ function facItemRowHTML(it) {
     '<input type="number" data-f-precio placeholder="Precio unitario ($)" value="' + esc(it.precioUnit !== undefined ? it.precioUnit : '') + '" inputmode="decimal" style="flex:1" />' +
     '<select data-f-iva style="width:118px"' + (_facCondicionEmisor !== 'responsable_inscripto' ? ' hidden' : '') + '>' + facIvaOptionsHTML(ivaSel) + '</select>' +
     '</div><div class="field"><label>Concepto</label><select data-f-concepto>' +
-    Object.keys(TIPOS_CONCEPTO).map(k => '<option value="' + k + '"' + (k === (it.tipoConcepto || 'material') ? ' selected' : '') + '>' + TIPOS_CONCEPTO[k] + '</option>').join('') + '</select>' +
+    Object.keys(TIPOS_CONCEPTO).map(k => '<option value="' + k + '"' + (k === tipoConcepto ? ' selected' : '') + '>' + TIPOS_CONCEPTO[k] + '</option>').join('') + '</select>' +
     '</div></div>';
 }
 

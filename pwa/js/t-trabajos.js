@@ -176,13 +176,13 @@ Pantallas.trabajos = {
     // Materiales
     h += '<div class="card"><div class="sec-titulo">🔩 Conceptos del trabajo</div>';
     if (!items.length) {
-      h += '<div class="hint">Sin materiales.</div>';
+      h += '<div class="hint">Sin conceptos cargados.</div>';
     } else {
       h += items.map(it => {
         const cant = parseFloat(it.cantidad) || 0;
         const pu = parseFloat(it.precioUnit) || 0;
         return '<div class="dato"><span class="k">' + esc(cant) + ' × ' + esc(it.descripcion || 'Material') +
-          ' — ' + esc(formatoPeso(pu)) + ' c/u</span>' +
+          ' — ' + esc(TIPOS_CONCEPTO[it.tipoConcepto || 'material']) + ' · ' + esc(formatoPeso(pu)) + ' c/u</span>' +
           '<span class="v">' + esc(formatoPeso(cant * pu)) + '</span></div>';
       }).join('');
     }
@@ -213,9 +213,10 @@ Pantallas.trabajos = {
     const neg = tot.margen < 0;
     h += '<div class="card"><div class="sec-titulo">💰 Totales</div>' +
       '<table class="eco">' +
-      '<tr><td>Conceptos detallados (precio)</td><td class="num">' + esc(formatoPeso(tot.materialesPrecio)) + '</td></tr>' +
-      '<tr><td>Mano de obra</td><td class="num">' + esc(formatoPeso(tot.manoObra)) + '</td></tr>' +
-      (tot.viaje > 0 ? '<tr><td>Traslado / Viáticos (cobrado)</td><td class="num">' + esc(formatoPeso(tot.viaje)) + '</td></tr>' : '') +
+      (tot.preciosPorConcepto.material > 0 ? '<tr><td>Repuestos / materiales (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.material)) + '</td></tr>' : '') +
+      '<tr><td>Servicios / mano de obra (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.servicio + tot.manoObra)) + '</td></tr>' +
+      (tot.preciosPorConcepto.traslado + tot.viaje > 0 ? '<tr><td>Traslado (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.traslado + tot.viaje)) + '</td></tr>' : '') +
+      (tot.preciosPorConcepto.viatico > 0 ? '<tr><td>Viáticos / otros cargos (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.viatico)) + '</td></tr>' : '') +
       (tot.manual > 0
         ? '<tr><td>Monto manual</td><td class="num">' + esc(formatoPeso(tot.manual)) + '</td></tr>' : '') +
       '<tr class="total"><td>Ingresos totales</td><td class="num">' + esc(formatoPeso(tot.ingresos)) + '</td></tr>' +
@@ -393,9 +394,9 @@ Pantallas.trabajos = {
       '<div id="tareasBox"></div>' +
       '<button type="button" class="btn btn-ghost" id="addTarea">＋ Agregar tarea</button>' +
 
-      '<div class="seccion-titulo"><h3>🔩 Materiales</h3></div>' +
+      '<div class="seccion-titulo"><h3>🧾 Servicios, repuestos y otros conceptos</h3></div>' +
       '<div id="matsBox"></div>' +
-      '<button type="button" class="btn btn-ghost" id="addMat">＋ Agregar material</button>' +
+      '<button type="button" class="btn btn-ghost" id="addMat">＋ Agregar concepto</button>' +
 
       '<div class="seccion-titulo"><h3>🧾 Mano de obra y viaje</h3></div>' +
       '<p class="hint">Si ya detallaste un servicio o un traslado en los conceptos, no se cobra otra vez por estas horas o kilómetros. Cargá cualquier adicional como un concepto nuevo.</p>' +
@@ -504,12 +505,13 @@ Pantallas.trabajos = {
       ).join('');
     const matRow = (m) => {
       m = m || {};
+      const tipoConcepto = m.tipoConcepto || (m.descripcion || m.repuestoId ? 'material' : 'servicio');
       const esLibre = !m.repuestoId;
       return '<div class="item-dinamico" data-mat data-stock-aplicado="' + (m.repuestoId && m.stockAplicado !== false ? '1' : '0') + '" data-concepto="' + esc(m.tipoConcepto || 'material') + '" data-iva="' + esc(m.iva == null ? 21 : m.iva) + '">' +
         '<div class="field"><label>Tipo de concepto</label><select data-mat-tipo>' +
-        Object.keys(TIPOS_CONCEPTO).map(k => '<option value="' + k + '"' + (k === (m.tipoConcepto || 'material') ? ' selected' : '') + '>' + TIPOS_CONCEPTO[k] + '</option>').join('') + '</select></div>' +
+        Object.keys(TIPOS_CONCEPTO).map(k => '<option value="' + k + '"' + (k === tipoConcepto ? ' selected' : '') + '>' + TIPOS_CONCEPTO[k] + '</option>').join('') + '</select></div>' +
         '<div class="field"><label>Repuesto</label><select data-mat-rep>' +
-        '<option value="">Material libre…</option>' + opcionesRepuestos() + '</select></div>' +
+        '<option value="">Sin repuesto de stock</option>' + opcionesRepuestos() + '</select></div>' +
         '<div class="field" data-mat-desc-wrap' + (esLibre ? '' : ' hidden') + '>' +
         '<label>Descripción</label><input type="text" data-mat-desc value="' + esc(m.descripcion || '') + '"' +
         ' placeholder="Ej.: Cuero de cilindro" /></div>' +
@@ -536,6 +538,7 @@ Pantallas.trabajos = {
       sel.onchange = () => {
         const r = repPorId[sel.value];
         if (r) {
+          fila.querySelector('[data-mat-tipo]').value = 'material';
           if (inpDesc) inpDesc.value = r.nombre;
           if (inpPrecio) inpPrecio.value = r.precio !== null && r.precio !== undefined ? r.precio : '';
           if (inpCosto) inpCosto.value = r.costo !== null && r.costo !== undefined ? r.costo : '';
