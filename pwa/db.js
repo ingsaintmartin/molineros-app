@@ -1208,6 +1208,47 @@ async function actualizarFactura(datos) {
   return datos;
 }
 
+// Reemplaza los ítems de un documento (al editar): borra los anteriores y
+// guarda los nuevos, con sus operaciones de sincronización.
+async function guardarItemsFactura(facturaId, items) {
+  const ahora = Date.now();
+  const ops = [];
+  await dbLocal.transaction('rw', dbLocal.factura_items, async () => {
+    const anteriores = await dbLocal.factura_items.where('facturaId').equals(facturaId).toArray();
+    for (const x of anteriores) ops.push({ tipo: 'delete', tabla: 'factura_items', id: x.id, createdAt: ahora });
+    await dbLocal.factura_items.where('facturaId').equals(facturaId).delete();
+    for (const it of items || []) {
+      const nuevo = {
+        id: genId('fit'), facturaId: facturaId, trabajoId: it.trabajoId || null,
+        descripcion: it.descripcion || '', cantidad: parseFloat(it.cantidad) || 1,
+        precioUnit: numOVacio(it.precioUnit) ?? 0,
+        iva: it.iva === undefined || it.iva === null || it.iva === '' ? null : parseFloat(it.iva),
+        createdAt: ahora
+      };
+      await dbLocal.factura_items.add(nuevo);
+      ops.push({ tipo: 'upsert', tabla: 'factura_items', row: facturaItemToRow(nuevo), createdAt: ahora });
+    }
+  });
+  await dbLocal.pendientes.bulkAdd(ops);
+  if (nubeLista()) await subirPendientes();
+}
+
+// Desvincula las órdenes de trabajo de un presupuesto (quedan como trabajos
+// independientes). Se usa al eliminar el presupuesto.
+async function desvincularTrabajosDePresupuesto(presId) {
+  const lista = await getTrabajosDePresupuesto(presId);
+  for (const t of lista) {
+    t.presupuestoId = null;
+    await actualizarTrabajo(t);
+  }
+  return lista.length;
+}
+
+async function eliminarPresupuesto(id) {
+  await desvincularTrabajosDePresupuesto(id);
+  await eliminarFactura(id);
+}
+
 async function eliminarFactura(id) {
   const ahora = Date.now();
   const ops = [];
