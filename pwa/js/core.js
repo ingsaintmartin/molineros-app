@@ -380,9 +380,15 @@ async function sembrarDemoSiCorresponde() {
   // tocar nada. La sincronización previa ya bajó lo de la nube, así que
   // si otro equipo sembró antes, acá no se duplica.
   try {
-    if (localStorage.getItem('demoAutoV1')) return;
+    if (localStorage.getItem('demoAutoV1')) {
+      if (await mejorarDemoEstablecimientos()) render();
+      return;
+    }
     const clientes = await getClientes();
-    if (clientes.some(c => (c.nombre || '').includes('(DEMO)'))) return;
+    if (clientes.some(c => (c.nombre || '').includes('(DEMO)'))) {
+      if (await mejorarDemoEstablecimientos()) render();
+      return;
+    }
     const creado = await cargarDatosEjemplo();
     if (creado) {
       try { localStorage.setItem('demoAutoV1', '1'); } catch (e) {}

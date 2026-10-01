@@ -68,9 +68,10 @@ function reparacionATrabajo(r, clienteId) {
   };
 }
 
-dbLocal.version(3).stores({
+dbLocal.version(4).stores({
   clientes:      'id, nombre, createdAt',
-  instalaciones: 'id, clienteId, tipo, createdAt',
+  establecimientos: 'id, clienteId, nombre',
+  instalaciones: 'id, clienteId, establecimientoId, tipo, createdAt',
   trabajos:      'id, instalacionId, clienteId, fecha, estado, createdAt',
   trabajo_items: 'id, trabajoId, createdAt',
   repuestos:     'id, nombre, categoria',
@@ -125,6 +126,24 @@ dbLocal.version(3).stores({
   }
 });
 // Nota: Dexie elimina las tablas 'molinos' y 'reparaciones' que ya no figuran.
+
+dbLocal.version(4).stores({
+  clientes:         'id, nombre, createdAt',
+  establecimientos: 'id, clienteId, nombre',
+  instalaciones:    'id, clienteId, establecimientoId, tipo, createdAt',
+  trabajos:         'id, instalacionId, clienteId, fecha, estado, createdAt',
+  trabajo_items:    'id, trabajoId, createdAt',
+  repuestos:        'id, nombre, categoria',
+  facturas:         'id, clienteId, numero, estado, createdAt',
+  factura_items:    'id, facturaId',
+  gastos:           'id, fecha, categoria, trabajoId',
+  vehiculos:        'id, nombre',
+  pendientes:       '++seq, createdAt'
+}).upgrade(async tx => {
+  // Migración v3 → v4: las instalaciones existentes quedan sin
+  // establecimiento (establecimientoId vacío) y se agrupan en
+  // "Sin establecimiento" hasta que se les asigne uno.
+});
 
 // ---- Nube Turso (opcional: la app anda igual sin ella) ----
 const TURSO_SIN_CONFIGURAR = 'TU-BASE';
@@ -201,7 +220,9 @@ function rowToCliente(r) {
 
 function instalacionToRow(i) {
   return {
-    id: i.id, cliente_id: i.clienteId || null, tipo: i.tipo || 'molino',
+    id: i.id, cliente_id: i.clienteId || null,
+    establecimiento_id: i.establecimientoId || null,
+    tipo: i.tipo || 'molino',
     nombre: i.nombre || '', marca: i.marca || null, modelo: i.modelo || null,
     caracteristicas: JSON.stringify(i.caracteristicas || {}),
     estado: i.estado || null, observaciones: i.observaciones || null,
@@ -212,13 +233,32 @@ function instalacionToRow(i) {
 }
 function rowToInstalacion(r) {
   return {
-    id: r.id, clienteId: r.cliente_id || null, tipo: r.tipo || 'molino',
+    id: r.id, clienteId: r.cliente_id || null,
+    establecimientoId: r.establecimiento_id || null,
+    tipo: r.tipo || 'molino',
     nombre: r.nombre || '', marca: r.marca || '', modelo: r.modelo || '',
     caracteristicas: jsonFromDb(r.caracteristicas, {}),
     estado: r.estado || 'Operativo', observaciones: r.observaciones || '',
     lat: r.lat ?? null, lng: r.lng ?? null,
     fotos: jsonFromDb(r.fotos, []),
     createdAt: r.created_at, updatedAt: r.updated_at
+  };
+}
+
+function establecimientoToRow(e) {
+  return {
+    id: e.id, cliente_id: e.clienteId || null, nombre: e.nombre || '',
+    contacto: e.contacto || null, telefono: e.telefono || null,
+    localidad: e.localidad || null, observaciones: e.observaciones || null,
+    created_at: e.createdAt || Date.now()
+  };
+}
+function rowToEstablecimiento(r) {
+  return {
+    id: r.id, clienteId: r.cliente_id || null, nombre: r.nombre || '',
+    contacto: r.contacto || '', telefono: r.telefono || '',
+    localidad: r.localidad || '', observaciones: r.observaciones || '',
+    createdAt: r.created_at
   };
 }
 
@@ -363,7 +403,8 @@ async function registrarOperacion(op) {
 
 const COLUMNAS = {
   clientes:      ['id', 'nombre', 'campo', 'localidad', 'telefono', 'cuit', 'email', 'observaciones', 'created_at'],
-  instalaciones: ['id', 'cliente_id', 'tipo', 'nombre', 'marca', 'modelo', 'caracteristicas',
+  establecimientos: ['id', 'cliente_id', 'nombre', 'contacto', 'telefono', 'localidad', 'observaciones', 'created_at'],
+  instalaciones: ['id', 'cliente_id', 'establecimiento_id', 'tipo', 'nombre', 'marca', 'modelo', 'caracteristicas',
                   'estado', 'observaciones', 'lat', 'lng', 'fotos', 'created_at', 'updated_at'],
   trabajos:      ['id', 'instalacion_id', 'cliente_id', 'fecha', 'descripcion', 'tareas', 'piezas_texto',
                   'horas', 'tarifa_hora', 'km', 'costo_km', 'monto_manual',
@@ -389,10 +430,13 @@ const TURSO_DDL = [
      id TEXT PRIMARY KEY, nombre TEXT, campo TEXT, localidad TEXT,
      telefono TEXT, cuit TEXT, email TEXT, observaciones TEXT, created_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS instalaciones (
-     id TEXT PRIMARY KEY, cliente_id TEXT, tipo TEXT, nombre TEXT,
+     id TEXT PRIMARY KEY, cliente_id TEXT, establecimiento_id TEXT, tipo TEXT, nombre TEXT,
      marca TEXT, modelo TEXT, caracteristicas TEXT, estado TEXT,
      observaciones TEXT, lat REAL, lng REAL, fotos TEXT,
      created_at INTEGER, updated_at INTEGER)`,
+  `CREATE TABLE IF NOT EXISTS establecimientos (
+     id TEXT PRIMARY KEY, cliente_id TEXT, nombre TEXT, contacto TEXT,
+     telefono TEXT, localidad TEXT, observaciones TEXT, created_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS trabajos (
      id TEXT PRIMARY KEY, instalacion_id TEXT, cliente_id TEXT, fecha TEXT,
      descripcion TEXT, tareas TEXT, piezas_texto TEXT, horas REAL,
@@ -423,7 +467,10 @@ const TURSO_DDL = [
   // Columnas nuevas en tablas que ya existían (se ignoran si ya están)
   `ALTER TABLE clientes ADD COLUMN cuit TEXT`,
   `ALTER TABLE clientes ADD COLUMN email TEXT`,
+  `ALTER TABLE instalaciones ADD COLUMN establecimiento_id TEXT`,
   `CREATE INDEX IF NOT EXISTS idx_ins_cliente ON instalaciones(cliente_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_ins_est ON instalaciones(establecimiento_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_est_cli ON establecimientos(cliente_id)`,
   `CREATE INDEX IF NOT EXISTS idx_tra_ins ON trabajos(instalacion_id)`,
   `CREATE INDEX IF NOT EXISTS idx_tra_cli ON trabajos(cliente_id)`,
   `CREATE INDEX IF NOT EXISTS idx_tit_tra ON trabajo_items(trabajo_id)`,
@@ -513,7 +560,8 @@ async function descargarDesdeNube() {
     await dbLocal.transaction('rw', ...tablasLocales, async () => {
       for (const t of TABLAS_SYNC) await dbLocal[t].clear();
       const conversores = {
-        clientes: rowToCliente, instalaciones: rowToInstalacion,
+        clientes: rowToCliente, establecimientos: rowToEstablecimiento,
+        instalaciones: rowToInstalacion,
         trabajos: rowToTrabajo, trabajo_items: rowToTrabajoItem,
         repuestos: rowToRepuesto, facturas: rowToFactura,
         factura_items: rowToFacturaItem, gastos: rowToGasto,
@@ -625,7 +673,7 @@ async function eliminarCliente(clienteId) {
   const ahora = Date.now();
   const ops = [];
   await dbLocal.transaction('rw',
-    dbLocal.clientes, dbLocal.instalaciones, dbLocal.trabajos, dbLocal.trabajo_items,
+    dbLocal.clientes, dbLocal.establecimientos, dbLocal.instalaciones, dbLocal.trabajos, dbLocal.trabajo_items,
     dbLocal.facturas, dbLocal.factura_items, dbLocal.gastos, async () => {
       const insts = await dbLocal.instalaciones.where('clienteId').equals(clienteId).toArray();
       const idsInst = insts.map(i => i.id);
@@ -669,6 +717,10 @@ async function eliminarCliente(clienteId) {
       for (const id of idsInst) ops.push({ tipo: 'delete', tabla: 'instalaciones', id: id, createdAt: ahora });
       await dbLocal.instalaciones.where('clienteId').equals(clienteId).delete();
 
+      const ests = await dbLocal.establecimientos.where('clienteId').equals(clienteId).toArray();
+      for (const e of ests) ops.push({ tipo: 'delete', tabla: 'establecimientos', id: e.id, createdAt: ahora });
+      await dbLocal.establecimientos.where('clienteId').equals(clienteId).delete();
+
       await dbLocal.clientes.delete(clienteId);
     });
   ops.push({ tipo: 'delete', tabla: 'clientes', id: clienteId, createdAt: ahora });
@@ -680,6 +732,46 @@ async function getClientes() {
   return dbLocal.clientes.orderBy('nombre').toArray();
 }
 async function getCliente(id) { return dbLocal.clientes.get(id); }
+
+// ------------------------------------------------------------------
+// ESTABLECIMIENTOS (cada cliente/CUIT puede tener varios; cada uno con
+// su propio contacto, distinto del contacto general del cliente)
+// ------------------------------------------------------------------
+async function crearEstablecimiento(datos) {
+  const e = Object.assign({}, datos, { id: genId('est'), createdAt: Date.now() });
+  await dbLocal.establecimientos.add(e);
+  await registrarOperacion({ tipo: 'upsert', tabla: 'establecimientos', row: establecimientoToRow(e) });
+  return e;
+}
+
+async function actualizarEstablecimiento(datos) {
+  await dbLocal.establecimientos.put(datos);
+  await registrarOperacion({ tipo: 'upsert', tabla: 'establecimientos', row: establecimientoToRow(datos) });
+  return datos;
+}
+
+async function eliminarEstablecimiento(estId) {
+  const ahora = Date.now();
+  const ops = [];
+  await dbLocal.transaction('rw', dbLocal.establecimientos, dbLocal.instalaciones, async () => {
+    // Las instalaciones no se borran: quedan en el cliente, sin establecimiento.
+    const inss = await dbLocal.instalaciones.where('establecimientoId').equals(estId).toArray();
+    for (const i of inss) {
+      const copia = Object.assign({}, i, { establecimientoId: null, updatedAt: ahora });
+      await dbLocal.instalaciones.put(copia);
+      ops.push({ tipo: 'upsert', tabla: 'instalaciones', row: instalacionToRow(copia), createdAt: ahora });
+    }
+    await dbLocal.establecimientos.delete(estId);
+  });
+  ops.push({ tipo: 'delete', tabla: 'establecimientos', id: estId, createdAt: ahora });
+  await dbLocal.pendientes.bulkAdd(ops);
+  if (nubeLista()) await subirPendientes();
+}
+
+async function getEstablecimientosDeCliente(clienteId) {
+  return dbLocal.establecimientos.where('clienteId').equals(clienteId).toArray();
+}
+async function getEstablecimiento(id) { return dbLocal.establecimientos.get(id); }
 
 // ------------------------------------------------------------------
 // INSTALACIONES (molinos, tanques, bebederos, bombas...)
@@ -1031,9 +1123,10 @@ async function getVehiculo(id) { return dbLocal.vehiculos.get(id); }
 // RESPALDO (exportar / importar JSON — funciona offline)
 // ------------------------------------------------------------------
 async function armarRespaldo() {
-  const [clientes, instalaciones, trabajos, trabajo_items, repuestos,
+  const [clientes, establecimientos, instalaciones, trabajos, trabajo_items, repuestos,
          facturas, factura_items, gastos, vehiculos] = await Promise.all([
-    dbLocal.clientes.toArray(), dbLocal.instalaciones.toArray(),
+    dbLocal.clientes.toArray(), dbLocal.establecimientos.toArray(),
+    dbLocal.instalaciones.toArray(),
     dbLocal.trabajos.toArray(), dbLocal.trabajo_items.toArray(),
     dbLocal.repuestos.toArray(), dbLocal.facturas.toArray(),
     dbLocal.factura_items.toArray(), dbLocal.gastos.toArray(),
@@ -1041,7 +1134,7 @@ async function armarRespaldo() {
   ]);
   return {
     app: 'MolineroApp', version: 2, exportado: new Date().toISOString(),
-    clientes, instalaciones, trabajos, trabajo_items, repuestos,
+    clientes, establecimientos, instalaciones, trabajos, trabajo_items, repuestos,
     facturas, factura_items, gastos, vehiculos
   };
 }
@@ -1068,6 +1161,7 @@ async function importarRespaldo(objeto) {
   }
   const ahora = Date.now();
   const clientes      = objeto.clientes      || [];
+  const establecimientos = objeto.establecimientos || [];
   const instalaciones = (objeto.instalaciones || []).concat(
     (objeto.molinos || []).map(molinoAInstalacion)
   );
@@ -1083,15 +1177,16 @@ async function importarRespaldo(objeto) {
   const gastos        = objeto.gastos        || [];
   const vehiculos     = objeto.vehiculos     || [];
 
-  const tablas = [dbLocal.clientes, dbLocal.instalaciones, dbLocal.trabajos,
+  const tablas = [dbLocal.clientes, dbLocal.establecimientos, dbLocal.instalaciones, dbLocal.trabajos,
                   dbLocal.trabajo_items, dbLocal.repuestos, dbLocal.facturas,
                   dbLocal.factura_items, dbLocal.gastos, dbLocal.vehiculos,
                   dbLocal.pendientes];
   await dbLocal.transaction('rw', ...tablas, async () => {
-    for (const t of tablas.slice(0, 9)) await t.clear();
+    for (const t of tablas.slice(0, 10)) await t.clear();
     await dbLocal.pendientes.clear();
     const cargas = [
-      [dbLocal.clientes, clientes], [dbLocal.instalaciones, instalaciones],
+      [dbLocal.clientes, clientes], [dbLocal.establecimientos, establecimientos],
+      [dbLocal.instalaciones, instalaciones],
       [dbLocal.trabajos, trabajos], [dbLocal.trabajo_items, trabajo_items],
       [dbLocal.repuestos, repuestos], [dbLocal.facturas, facturas],
       [dbLocal.factura_items, factura_items], [dbLocal.gastos, gastos],
@@ -1103,21 +1198,22 @@ async function importarRespaldo(objeto) {
     // La nube se reemplaza por completo, en orden de dependencias
     const ops = [];
     for (const t of ['factura_items', 'trabajo_items', 'gastos', 'facturas',
-                     'trabajos', 'instalaciones', 'repuestos', 'vehiculos', 'clientes']) {
+                     'trabajos', 'instalaciones', 'establecimientos', 'repuestos', 'vehiculos', 'clientes']) {
       ops.push({ tipo: 'clear', tabla: t, createdAt: ahora });
     }
     const conv = {
-      clientes: clienteToRow, instalaciones: instalacionToRow,
+      clientes: clienteToRow, establecimientos: establecimientoToRow,
+      instalaciones: instalacionToRow,
       trabajos: trabajoToRow, trabajo_items: trabajoItemToRow,
       repuestos: repuestoToRow, facturas: facturaToRow,
       factura_items: facturaItemToRow, gastos: gastoToRow,
       vehiculos: vehiculoToRow
     };
     const datos = {
-      clientes, instalaciones, trabajos, trabajo_items, repuestos,
+      clientes, establecimientos, instalaciones, trabajos, trabajo_items, repuestos,
       facturas, factura_items, gastos, vehiculos
     };
-    for (const t of ['clientes', 'vehiculos', 'repuestos', 'instalaciones',
+    for (const t of ['clientes', 'establecimientos', 'vehiculos', 'repuestos', 'instalaciones',
                      'trabajos', 'trabajo_items', 'facturas', 'factura_items', 'gastos']) {
       for (const fila of datos[t]) {
         ops.push({ tipo: 'upsert', tabla: t, row: conv[t](fila), createdAt: ahora });
