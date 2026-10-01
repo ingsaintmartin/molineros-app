@@ -28,22 +28,36 @@ async function cargarDatosEjemplo() {
     observaciones: 'Cliente de prueba cargado automáticamente. Se puede borrar desde Más → datos.'
   });
 
+  // Establecimientos: el mismo cliente/CUIT, cada uno con su contacto
+  const casco = await crearEstablecimiento({
+    clienteId: cli.id, nombre: 'Casco',
+    contacto: 'Juan Pérez', telefono: '+54 9 2223 44-0101',
+    localidad: 'General Belgrano',
+    observaciones: 'Establecimiento de ejemplo'
+  });
+  const lote3 = await crearEstablecimiento({
+    clienteId: cli.id, nombre: 'Lote 3',
+    contacto: 'María Gómez', telefono: '+54 9 2223 44-0202',
+    localidad: 'General Belgrano',
+    observaciones: 'Establecimiento de ejemplo'
+  });
+
   // Instalaciones georreferenciadas
   const molino = await crearInstalacion({
-    clienteId: cli.id, tipo: 'molino', nombre: 'Molino Norte #1',
+    clienteId: cli.id, establecimientoId: casco.id, tipo: 'molino', nombre: 'Molino Norte #1',
     marca: 'Fiasa', modelo: '8 pies', estado: 'operativo',
     lat: -35.8231, lng: -58.5023,
     caracteristicas: { diametro: '8 pies', altura: '12 m', orientacion: 'Norte' },
     observaciones: 'Instalación de ejemplo'
   });
   const tanque = await crearInstalacion({
-    clienteId: cli.id, tipo: 'tanque', nombre: 'Tanque Australiano',
+    clienteId: cli.id, establecimientoId: casco.id, tipo: 'tanque', nombre: 'Tanque Australiano',
     estado: 'operativo', lat: -35.8245, lng: -58.5001,
     caracteristicas: { capacidad: '20000 l', diametro: '5 m' },
     observaciones: 'Instalación de ejemplo'
   });
   const bebedero = await crearInstalacion({
-    clienteId: cli.id, tipo: 'bebedero', nombre: 'Bebedero Lote 3',
+    clienteId: cli.id, establecimientoId: lote3.id, tipo: 'bebedero', nombre: 'Bebedero Lote 3',
     estado: 'mantenimiento', lat: -35.8201, lng: -58.5055,
     observaciones: 'Instalación de ejemplo'
   });
@@ -110,4 +124,42 @@ async function cargarDatosEjemplo() {
 
   snack('Datos de ejemplo cargados');
   return true;
+}
+
+// Mejora una sola vez las demos sembradas antes de que existieran los
+// establecimientos: crea "Casco" y "Lote 3" (cada uno con su contacto)
+// y les asigna las instalaciones de ejemplo existentes.
+async function mejorarDemoEstablecimientos() {
+  try {
+    if (localStorage.getItem('demoEstV1')) return false;
+    const clientes = await getClientes();
+    const demo = clientes.find(c => /\(DEMO\)/i.test(c.nombre || ''));
+    if (!demo) return false;
+    const ests = await getEstablecimientosDeCliente(demo.id);
+    if (ests.length) {
+      try { localStorage.setItem('demoEstV1', '1'); } catch (e) {}
+      return false;
+    }
+    const casco = await crearEstablecimiento({
+      clienteId: demo.id, nombre: 'Casco',
+      contacto: 'Juan Pérez', telefono: '+54 9 2223 44-0101',
+      localidad: 'General Belgrano',
+      observaciones: 'Establecimiento de ejemplo'
+    });
+    const lote3 = await crearEstablecimiento({
+      clienteId: demo.id, nombre: 'Lote 3',
+      contacto: 'María Gómez', telefono: '+54 9 2223 44-0202',
+      localidad: 'General Belgrano',
+      observaciones: 'Establecimiento de ejemplo'
+    });
+    const inss = await getInstalacionesDeCliente(demo.id);
+    for (const i of inss) {
+      const esLote3 = /lote 3/i.test(i.nombre || '');
+      await actualizarInstalacion(Object.assign({}, i, {
+        establecimientoId: esLote3 ? lote3.id : casco.id
+      }));
+    }
+    try { localStorage.setItem('demoEstV1', '1'); } catch (e) {}
+    return true;
+  } catch (e) { console.warn('No se pudo mejorar la demo:', e); return false; }
 }

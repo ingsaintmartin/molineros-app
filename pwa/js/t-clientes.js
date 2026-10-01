@@ -139,12 +139,14 @@ async function renderClienteDetalle(id) {
   if (!c) {
     return '<div class="vacio"><span class="emoji">👥</span>No se encontró el cliente.</div>';
   }
-  const [inss, trabajos, cuenta] = await Promise.all([
+  const [inss, trabajos, cuenta, ests] = await Promise.all([
     getInstalacionesDeCliente(id),
     getTrabajosDeCliente(id),
-    cuentaDeCliente(id)
+    cuentaDeCliente(id),
+    getEstablecimientosDeCliente(id)
   ]);
   inss.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
+  ests.sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
 
   let h = '<div class="card"><h2>' + esc(c.nombre) + '</h2>';
   h += '<div class="dato"><span class="k">Campo</span><span class="v">' + esc(c.campo || '—') + '</span></div>';
@@ -158,14 +160,31 @@ async function renderClienteDetalle(id) {
   if (c.observaciones) h += '<div class="dato"><span class="k">Observaciones</span><span class="v pre">' + esc(c.observaciones) + '</span></div>';
   h += '</div>';
 
-  // Instalaciones
-  h += '<div class="seccion-titulo"><h3>Instalaciones (' + inss.length + ')</h3></div>';
+  // Establecimientos (cada uno con su contacto) y sus instalaciones
+  h += '<div class="seccion-titulo"><h3>Establecimientos (' + ests.length + ')</h3></div>';
+  for (const e of ests) {
+    const inssEst = inss.filter(i => i.establecimientoId === e.id);
+    h += '<div class="card"><div class="sec-titulo">🏡 ' + esc(e.nombre) + '</div>';
+    if (e.contacto) h += '<div class="dato"><span class="k">Contacto</span><span class="v">' + esc(e.contacto) + '</span></div>';
+    if (e.telefono) {
+      const tel = String(e.telefono).replace(/[^+\d]/g, '');
+      h += '<div class="dato"><span class="k">Teléfono</span><span class="v"><a href="tel:' + esc(tel) + '">' + esc(e.telefono) + '</a></span></div>';
+    }
+    if (e.localidad) h += '<div class="dato"><span class="k">Localidad</span><span class="v">' + esc(e.localidad) + '</span></div>';
+    h += '<div class="btn-row"><button class="btn btn-secondary chico" data-editar-est="' + esc(e.id) + '">✏️ Editar</button></div>';
+    h += '</div>';
+    if (inssEst.length) h += inssEst.map(filaInstalacionHTML).join('');
+  }
+  const sinEst = inss.filter(i => !i.establecimientoId);
+  if (sinEst.length) {
+    h += '<div class="seccion-titulo"><h3>Sin establecimiento (' + sinEst.length + ')</h3></div>';
+    h += sinEst.map(filaInstalacionHTML).join('');
+  }
   if (!inss.length) {
     h += '<div class="vacio"><span class="emoji">🌀</span>Todavía no hay instalaciones cargadas.</div>';
-  } else {
-    h += inss.map(filaInstalacionHTML).join('');
   }
-  h += '<button class="btn btn-secondary" id="cli-nueva-ins">＋ Nueva instalación</button>';
+  h += '<div class="btn-row"><button class="btn btn-secondary" id="cli-nuevo-est">＋ Nuevo establecimiento</button>' +
+       '<button class="btn btn-secondary" id="cli-nueva-ins">＋ Nueva instalación</button></div>';
 
   // Historial de trabajos
   h += '<div class="seccion-titulo"><h3>Historial de trabajos</h3></div>';
@@ -208,8 +227,13 @@ function bindClienteDetalle(id) {
   document.querySelectorAll('[data-ver-trabajo]').forEach(b => {
     b.onclick = () => go('trabajos', { vista: 'detalle', id: b.dataset.verTrabajo });
   });
+  document.getElementById('cli-nuevo-est').onclick = () =>
+    go('clientes', { vista: 'establecimientoForm', clienteId: id });
   document.getElementById('cli-nueva-ins').onclick = () =>
     go('clientes', { vista: 'instalacionForm', clienteId: id });
+  document.querySelectorAll('[data-editar-est]').forEach(b => {
+    b.onclick = () => go('clientes', { vista: 'establecimientoForm', id: b.dataset.editarEst });
+  });
   document.getElementById('cli-nuevo-trabajo').onclick = () =>
     go('trabajos', { vista: 'form', clienteId: id });
   document.getElementById('cli-editar').onclick = () =>
@@ -291,6 +315,7 @@ async function renderInstalacion(id) {
     getTrabajosDeInstalacion(id),
     itemsPorTrabajo()
   ]);
+  const establecimiento = i.establecimientoId ? await getEstablecimiento(i.establecimientoId) : null;
 
   // Cabecera
   let h = '<div class="card"><div style="display:flex;gap:14px;align-items:center">' +
@@ -299,7 +324,11 @@ async function renderInstalacion(id) {
     '<div style="margin-top:6px">' + chipInstalacion(i.estado) + '</div></div></div>';
   if (cliente) {
     h += '<div style="margin-top:12px"><button class="btn btn-secondary chico" data-ver-cliente="' + esc(cliente.id) + '">' +
-      '👤 ' + esc(cliente.nombre) + '</button></div>';
+      '👤 ' + esc(cliente.nombre) + '</button>';
+    if (establecimiento) {
+      h += ' <span class="chip">🏡 ' + esc(establecimiento.nombre) + '</span>';
+    }
+    h += '</div>';
   }
   h += '</div>';
 
@@ -424,6 +453,8 @@ async function renderInstalacionForm(id, clienteIdParam) {
   const tipo = (i && i.tipo) || 'molino';
   const clienteSel = (i && i.clienteId) || clienteIdParam || '';
   const estado = (i && i.estado) || 'Operativo';
+  const ests = clienteSel ? await getEstablecimientosDeCliente(clienteSel) : [];
+  const estSel = (i && i.establecimientoId) || '';
 
   let h = '<div class="card"><div class="sec-titulo">' + (i ? 'Editar instalación' : 'Nueva instalación') + '</div>';
   h += '<div class="form">';
@@ -433,6 +464,9 @@ async function renderInstalacionForm(id, clienteIdParam) {
   h += campoSelect('insForm-cliente', 'Cliente',
     [{ value: '', texto: 'Elegir…' }].concat(clientes.map(c => ({ value: c.id, texto: c.nombre }))),
     clienteSel, { req: true });
+  h += campoSelect('insForm-establecimiento', 'Establecimiento',
+    [{ value: '', texto: 'Sin establecimiento' }].concat(ests.map(e => ({ value: e.id, texto: e.nombre }))),
+    estSel, { hint: 'Opcional: a qué campo pertenece' });
   h += campo('text', 'insForm-nombre', 'Nombre', i ? i.nombre : '', { req: true, hint: 'Ej: Molino Norte #4' });
   h += campo('text', 'insForm-marca', 'Marca', i ? i.marca : '', {});
   h += campo('text', 'insForm-modelo', 'Modelo', i ? i.modelo : '', {});
@@ -476,6 +510,13 @@ function bindInstalacionForm(id) {
     document.getElementById('insForm-car').innerHTML = carHTML(e.target.value, vals);
   };
 
+  document.getElementById('insForm-cliente').onchange = async e => {
+    const ests = e.target.value ? await getEstablecimientosDeCliente(e.target.value) : [];
+    document.getElementById('insForm-establecimiento').innerHTML =
+      '<option value="">Sin establecimiento</option>' +
+      ests.map(x => '<option value="' + esc(x.id) + '">' + esc(x.nombre) + '</option>').join('');
+  };
+
   document.getElementById('insForm-gps').onclick = async () => {
     snack('Buscando ubicación…');
     const gps = await obtenerGPS();
@@ -504,6 +545,7 @@ function bindInstalacionForm(id) {
     const datos = {
       tipo: val('insForm-tipo'),
       clienteId: clienteId,
+      establecimientoId: val('insForm-establecimiento') || null,
       nombre: nombre,
       marca: val('insForm-marca'),
       modelo: val('insForm-modelo'),
@@ -545,6 +587,76 @@ function bindInstalacionForm(id) {
   }
 }
 
+/* ============ VISTA: formulario de establecimiento ============ */
+async function renderEstablecimientoForm(id, clienteIdParam) {
+  const e = id ? await getEstablecimiento(id) : null;
+  const clientes = await getClientes();
+  const clienteSel = (e && e.clienteId) || clienteIdParam || '';
+
+  let h = '<div class="card"><div class="sec-titulo">' + (e ? 'Editar establecimiento' : 'Nuevo establecimiento') + '</div>';
+  h += '<div class="form">';
+  h += campoSelect('estForm-cliente', 'Cliente',
+    [{ value: '', texto: 'Elegir…' }].concat(clientes.map(c => ({ value: c.id, texto: c.nombre }))),
+    clienteSel, { req: true });
+  h += campo('text', 'estForm-nombre', 'Nombre del establecimiento', e ? e.nombre : '',
+    { req: true, hint: 'Ej: Casco, Lote 3, Campo El Ombú' });
+  h += campo('text', 'estForm-contacto', 'Contacto', e ? e.contacto : '',
+    { hint: 'Persona de contacto en este establecimiento' });
+  h += campo('tel', 'estForm-telefono', 'Teléfono del contacto', e ? e.telefono : '', {});
+  h += campo('text', 'estForm-localidad', 'Localidad', e ? e.localidad : '', {});
+  h += campo('text', 'estForm-observaciones', 'Observaciones', e ? e.observaciones : '', {});
+  h += '</div></div>';
+
+  h += '<button class="btn btn-primary" id="estForm-guardar">💾 Guardar</button>';
+  if (e) h += '<button class="btn btn-outline-danger" id="estForm-eliminar">🗑️ Eliminar establecimiento</button>';
+  return h;
+}
+
+function bindEstablecimientoForm(id) {
+  document.getElementById('estForm-guardar').onclick = async () => {
+    const nombre = val('estForm-nombre');
+    if (!nombre) { snack('Poné el nombre del establecimiento.'); return; }
+    const clienteId = val('estForm-cliente');
+    if (!clienteId) { snack('Elegí el cliente.'); return; }
+    const datos = {
+      clienteId: clienteId,
+      nombre: nombre,
+      contacto: val('estForm-contacto'),
+      telefono: val('estForm-telefono'),
+      localidad: val('estForm-localidad'),
+      observaciones: val('estForm-observaciones')
+    };
+    let volverA = clienteId;
+    if (id) {
+      const anterior = await getEstablecimiento(id);
+      datos.id = id;
+      datos.createdAt = anterior ? anterior.createdAt : Date.now();
+      volverA = anterior ? anterior.clienteId : clienteId;
+      await actualizarEstablecimiento(datos);
+    } else {
+      await crearEstablecimiento(datos);
+    }
+    snack('Establecimiento guardado.');
+    go('clientes', { vista: 'detalle', id: volverA });
+  };
+
+  const btnDel = document.getElementById('estForm-eliminar');
+  if (btnDel) {
+    btnDel.onclick = async () => {
+      const ok = await confirmar('Eliminar establecimiento',
+        'Las instalaciones quedan en el cliente, sin establecimiento asignado. Esta acción no se puede deshacer.',
+        'Sí, eliminar');
+      if (!ok) return;
+      const e = await getEstablecimiento(id);
+      const clienteId = e ? e.clienteId : null;
+      await eliminarEstablecimiento(id);
+      snack('Establecimiento eliminado.');
+      if (clienteId) go('clientes', { vista: 'detalle', id: clienteId }, true);
+      else go('clientes', { vista: 'lista' }, true);
+    };
+  }
+}
+
 /* ============ Registro de la pestaña ============ */
 Pantallas.clientes = {
   titulo: 'Clientes',
@@ -555,6 +667,7 @@ Pantallas.clientes = {
     if (vista === 'clienteForm') return renderClienteForm(params.id);
     if (vista === 'instalacion') return renderInstalacion(params.id);
     if (vista === 'instalacionForm') return renderInstalacionForm(params.id, params.clienteId);
+    if (vista === 'establecimientoForm') return renderEstablecimientoForm(params.id, params.clienteId);
     return renderListaClientes();
   },
 
@@ -564,6 +677,7 @@ Pantallas.clientes = {
     if (vista === 'clienteForm') return bindClienteForm(params.id);
     if (vista === 'instalacion') return bindInstalacion(params.id);
     if (vista === 'instalacionForm') return bindInstalacionForm(params.id);
+    if (vista === 'establecimientoForm') return bindEstablecimientoForm(params.id);
     return bindListaClientes();
   }
 };
