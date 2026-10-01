@@ -275,6 +275,7 @@ function trabajoToRow(t) {
     piezas_texto: t.piezasTexto || null,
     horas: numOVacio(t.horas), tarifa_hora: numOVacio(t.tarifaHora),
     km: numOVacio(t.km), costo_km: numOVacio(t.costoKm),
+    litros: numOVacio(t.litros), precio_litro: numOVacio(t.precioLitro),
     monto_manual: numOVacio(t.montoManual),
     estado: t.estado || 'a_hacer', observaciones: t.observaciones || null,
     fotos: JSON.stringify(t.fotos || []),
@@ -290,6 +291,7 @@ function rowToTrabajo(r) {
     piezasTexto: r.piezas_texto || '',
     horas: r.horas ?? null, tarifaHora: r.tarifa_hora ?? null,
     km: r.km ?? null, costoKm: r.costo_km ?? null,
+    litros: r.litros ?? null, precioLitro: r.precio_litro ?? null,
     montoManual: r.monto_manual ?? null,
     estado: r.estado || 'a_hacer', observaciones: r.observaciones || '',
     fotos: jsonFromDb(r.fotos, []),
@@ -502,7 +504,7 @@ const COLUMNAS = {
   instalaciones: ['id', 'cliente_id', 'establecimiento_id', 'tipo', 'nombre', 'marca', 'modelo', 'caracteristicas',
                   'estado', 'observaciones', 'lat', 'lng', 'fotos', 'created_at', 'updated_at'],
   trabajos:      ['id', 'instalacion_id', 'cliente_id', 'fecha', 'descripcion', 'tareas', 'piezas_texto',
-                  'horas', 'tarifa_hora', 'km', 'costo_km', 'monto_manual',
+                  'horas', 'tarifa_hora', 'km', 'costo_km', 'litros', 'precio_litro', 'monto_manual',
                   'estado', 'observaciones', 'fotos', 'presupuesto_id', 'created_at', 'updated_at'],
   trabajo_items: ['id', 'trabajo_id', 'repuesto_id', 'descripcion', 'cantidad', 'costo_unit', 'precio_unit', 'created_at'],
   repuestos:     ['id', 'nombre', 'categoria', 'stock', 'stock_min', 'costo', 'precio', 'created_at', 'updated_at'],
@@ -537,7 +539,8 @@ const TURSO_DDL = [
   `CREATE TABLE IF NOT EXISTS trabajos (
      id TEXT PRIMARY KEY, instalacion_id TEXT, cliente_id TEXT, fecha TEXT,
      descripcion TEXT, tareas TEXT, piezas_texto TEXT, horas REAL,
-     tarifa_hora REAL, km REAL, costo_km REAL, monto_manual REAL,
+     tarifa_hora REAL, km REAL, costo_km REAL, litros REAL, precio_litro REAL,
+     monto_manual REAL,
      estado TEXT, observaciones TEXT, fotos TEXT, presupuesto_id TEXT,
      created_at INTEGER, updated_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS trabajo_items (
@@ -576,6 +579,8 @@ const TURSO_DDL = [
   `ALTER TABLE factura_items ADD COLUMN iva REAL`,
   `ALTER TABLE instalaciones ADD COLUMN establecimiento_id TEXT`,
   `ALTER TABLE trabajos ADD COLUMN presupuesto_id TEXT`,
+  `ALTER TABLE trabajos ADD COLUMN litros REAL`,
+  `ALTER TABLE trabajos ADD COLUMN precio_litro REAL`,
   `ALTER TABLE facturas ADD COLUMN iva_incluido INTEGER`,
   `CREATE INDEX IF NOT EXISTS idx_ins_cliente ON instalaciones(cliente_id)`,
   `CREATE INDEX IF NOT EXISTS idx_ins_est ON instalaciones(establecimiento_id)`,
@@ -750,7 +755,13 @@ function totalesTrabajo(t, items) {
     matPrecio += c * (parseFloat(it.precioUnit) || 0);
   }
   const manoObra = (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
-  const viaje    = (parseFloat(t.km) || 0) * (parseFloat(t.costoKm) || 0);
+  // Viaje: si se cargaron litros de combustible, se calcula litros × $/litro;
+  // si no, km × costo por km.
+  const litros = parseFloat(t.litros) || 0;
+  const precioLitro = parseFloat(t.precioLitro) || 0;
+  const viaje = (litros > 0 && precioLitro > 0)
+    ? litros * precioLitro
+    : (parseFloat(t.km) || 0) * (parseFloat(t.costoKm) || 0);
   const manual   = parseFloat(t.montoManual) || 0;
   const ingresos = manoObra + matPrecio + manual;
   const costos   = matCosto + viaje;
@@ -1003,12 +1014,15 @@ async function crearTrabajoDesdePresupuesto(presId) {
     const cTxt = (Math.round(c) === c) ? String(c) : String(Math.round(c * 100) / 100);
     return cTxt + ' × ' + (it.descripcion || 'Ítem');
   });
+  // La orden hereda el monto acordado en el presupuesto
+  const tot = totalesConIVA(items || [], 21, f.ivaIncluido !== false);
   const t = await crearTrabajo({
     clienteId: f.clienteId || null,
     instalacionId: null,
     fecha: hoyISO(),
     descripcion: 'Orden de trabajo · Presupuesto Nº ' + (f.numero || ''),
     tareas: tareas,
+    montoManual: tot.total || null,
     estado: 'a_hacer',
     observaciones: (f.observaciones || ''),
     presupuestoId: presId
