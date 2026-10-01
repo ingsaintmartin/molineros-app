@@ -81,7 +81,7 @@ t('trabajo detalle: monto manual según presupuesto', /según presupuesto/.test(
 
 const gas = leer('js/t-gastos.js');
 t('vehículo form: litros de gasoil por km', /vehLitrosKm/.test(gas));
-t('vehículo autocompleta l/km en trabajo', /inpLitrosKm/.test(tra));
+t('vehículo no reemplaza la tarifa de viáticos por consumo', !/inpLitrosKm/.test(tra) && /Litros cobrados por km de ida/.test(tra));
 
 const mas = leer('js/t-mas.js');
 t('config: precio del litro de gasoil', /cfgPrecioLitro/.test(mas));

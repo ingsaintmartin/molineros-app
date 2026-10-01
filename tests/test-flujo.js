@@ -88,7 +88,7 @@ const api = vm.runInContext('({ dbLocal, crearCliente, guardarEmpresa, crearFact
   assert.equal(adaptados[0].precioUnit, 121, 'conserva el importe al unir trabajos con distinto modo de precios');
   assert.equal(a.trabajosFacturados([{ id: 'p', tipo: 'presupuesto' }, { id: 'a', tipo: 'factura', estado: 'anulada' }],
     [{ facturaId: 'p', trabajoId: 't' }, { facturaId: 'a', trabajoId: 't' }]).size, 0);
-  assert.equal(a.totalesTrabajo({ km: 10, costoRealKm: 250 }, [], { costoKm: 900 }).viajeCosto, 2500, 'conserva el costo histórico');
+  assert.equal(a.totalesTrabajo({ km: 10, costoRealKm: 250 }, [], { costoKm: 900 }).viajeCosto, 5000, 'costo histórico del vehículo sobre ida y vuelta');
   const economia = a.totalesTrabajo({ condicionEmisor: 'responsable_inscripto', ivaIncluido: true },
     [{ cantidad: 1, precioUnit: 121, costoUnit: 50, iva: 21 }], null,
     [{ monto: 10, imputacion: 'adicional' }, { monto: 20, imputacion: 'incluido_materiales' }, { monto: 30, imputacion: 'incluido_vehiculo' }]);
@@ -101,6 +101,21 @@ const api = vm.runInContext('({ dbLocal, crearCliente, guardarEmpresa, crearFact
     { cantidad: 1, precioUnit: 2000, tipoConcepto: 'traslado' }
   ]);
   assert.equal(acordado.ingresos, 12000, 'no suma horas ni viaje sobre los mismos conceptos acordados');
+  assert.equal(acordado.manoObra, 15000, 'el servicio no anula el costo del ayudante');
+  const revision = a.totalesTrabajo({ horas: 5, tarifaHora: 10000, km: 50, precioLitro: 2500 },
+    [{ cantidad: 1, precioUnit: 50000, tipoConcepto: 'servicio' }]);
+  assert.equal(revision.viaje, 125000, 'cobra un litro por kilómetro de ida');
+  assert.equal(revision.manoObra, 50000);
+  assert.equal(revision.ingresos, 175000, 'el ayudante no se suma como ingreso');
+  assert.equal(revision.costos, 50000);
+  assert.equal(revision.margen, 125000);
+  const trabajoAyudante = await a.guardarTrabajoConItems({ clienteId: cliente.id, estado: 'terminado',
+    descripcion: 'Revisión con ayudante', horas: 5, tarifaHora: 10000, km: 50, litrosKm: 1, precioLitro: 2500 },
+    [{ descripcion: 'Servicio del molinero', cantidad: 1, precioUnit: 50000, tipoConcepto: 'servicio' }]);
+  const detalleAyudante = await a.desglosarTrabajoParaFactura(trabajoAyudante.id);
+  assert.equal(detalleAyudante.items.reduce((sum, it) => sum + it.cantidad * it.precioUnit, 0), 175000,
+    'factura servicio y viáticos; no agrega el costo del ayudante a lo cobrado');
+  assert.equal(detalleAyudante.items.length, 2);
   assert.deepEqual(JSON.parse(JSON.stringify(acordado.preciosPorConcepto)),
     { material: 0, servicio: 10000, traslado: 2000, viatico: 0 }, 'una revisión se contabiliza como servicio, no como material');
   const repuesto = await a.crearRepuesto({ nombre: 'Cuero stock', stock: 5, costo: 500, precio: 2000 });

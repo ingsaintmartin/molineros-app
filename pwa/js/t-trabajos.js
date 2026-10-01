@@ -192,11 +192,11 @@ Pantallas.trabajos = {
     if ((parseFloat(t.horas) || 0) > 0 || (parseFloat(t.montoManual) || 0) > 0 || (parseFloat(t.km) || 0) > 0 || (parseFloat(t.litrosKm) || 0) > 0) {
       h += '<div class="card"><div class="sec-titulo">🧾 Conceptos</div>';
       if ((parseFloat(t.horas) || 0) > 0) {
-        h += '<div class="dato"><span class="k">Mano de obra (' + esc(t.horas) + ' h × ' +
+        h += '<div class="dato"><span class="k">Costo del ayudante (' + esc(t.horas) + ' h × ' +
           esc(formatoPeso(t.tarifaHora)) + ')</span><span class="v">' + esc(formatoPeso(tot.manoObra)) + '</span></div>';
       }
       if ((parseFloat(t.litrosKm) || 0) > 0 && (parseFloat(t.precioLitro) || 0) > 0) {
-        h += '<div class="dato"><span class="k">Viaje (' + esc(t.km || 0) + ' km × ' + esc(t.litrosKm) + ' l/km × ' +
+        h += '<div class="dato"><span class="k">Viáticos (' + esc(t.km || 0) + ' km de ida × ' + esc(t.litrosKm) + ' l/km × ' +
           esc(formatoPeso(t.precioLitro)) + ')</span><span class="v">' + esc(formatoPeso(tot.viaje)) + '</span></div>';
       } else if ((parseFloat(t.km) || 0) > 0) {
         h += '<div class="dato"><span class="k">Viaje (' + esc(t.km) + ' km × ' +
@@ -214,13 +214,15 @@ Pantallas.trabajos = {
     h += '<div class="card"><div class="sec-titulo">💰 Totales</div>' +
       '<table class="eco">' +
       (tot.preciosPorConcepto.material > 0 ? '<tr><td>Repuestos / materiales (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.material)) + '</td></tr>' : '') +
-      '<tr><td>Servicios / mano de obra (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.servicio + tot.manoObra)) + '</td></tr>' +
+      '<tr><td>Servicios del molinero (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.servicio)) + '</td></tr>' +
       (tot.preciosPorConcepto.traslado + tot.viaje > 0 ? '<tr><td>Traslado (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.traslado + tot.viaje)) + '</td></tr>' : '') +
       (tot.preciosPorConcepto.viatico > 0 ? '<tr><td>Viáticos / otros cargos (precio)</td><td class="num">' + esc(formatoPeso(tot.preciosPorConcepto.viatico)) + '</td></tr>' : '') +
       (tot.manual > 0
         ? '<tr><td>Monto manual</td><td class="num">' + esc(formatoPeso(tot.manual)) + '</td></tr>' : '') +
       '<tr class="total"><td>Ingresos totales</td><td class="num">' + esc(formatoPeso(tot.ingresos)) + '</td></tr>' +
-      '<tr><td>Costos (conceptos + vehículo + gastos directos)</td><td class="num">' + esc(formatoPeso(tot.costos)) + '</td></tr>' +
+      '<tr><td>Costo del ayudante</td><td class="num">' + esc(formatoPeso(tot.manoObra)) + '</td></tr>' +
+      '<tr><td>Costo del vehículo (ida y vuelta)</td><td class="num">' + esc(formatoPeso(tot.viajeCosto)) + '</td></tr>' +
+      '<tr><td>Costos totales (conceptos + ayudante + vehículo + gastos)</td><td class="num">' + esc(formatoPeso(tot.costos)) + '</td></tr>' +
       '<tr class="margen' + (neg ? ' negativo' : '') + '"><td>Margen (' +
       esc((neg ? '−' : '') + Math.abs(tot.margenPct).toFixed(0) + ' %') + ')</td>' +
       '<td class="num">' + esc(formatoPeso(tot.margen)) + '</td></tr>' +
@@ -398,26 +400,26 @@ Pantallas.trabajos = {
       '<div id="matsBox"></div>' +
       '<button type="button" class="btn btn-ghost" id="addMat">＋ Agregar concepto</button>' +
 
-      '<div class="seccion-titulo"><h3>🧾 Mano de obra y viaje</h3></div>' +
-      '<p class="hint">Si ya detallaste un servicio o un traslado en los conceptos, no se cobra otra vez por estas horas o kilómetros. Cargá cualquier adicional como un concepto nuevo.</p>' +
+      '<div class="seccion-titulo"><h3>🧾 Costo del ayudante y viáticos</h3></div>' +
+      '<p class="hint">Horas × costo por hora es el costo interno del ayudante: se descuenta del margen. El precio del trabajo del dueño se carga arriba como servicio. Si detallaste un traslado, no se vuelve a cobrar por kilómetros.</p>' +
       '<div class="field-row">' +
-      campo('text', 'traHoras', 'Horas', t && t.horas !== null && t.horas !== undefined ? t.horas : '',
+      campo('text', 'traHoras', 'Horas del ayudante', t && t.horas !== null && t.horas !== undefined ? t.horas : '',
         { inputmode: 'decimal', placeholder: '0' }) +
-      campo('text', 'traTarifa', 'Tarifa por hora', t && t.tarifaHora !== null && t.tarifaHora !== undefined ? t.tarifaHora : getCfg('tarifaHora', ''),
+      campo('text', 'traTarifa', 'Costo por hora del ayudante', t && t.tarifaHora !== null && t.tarifaHora !== undefined ? t.tarifaHora : getCfg('tarifaHora', ''),
         { inputmode: 'decimal', placeholder: '$' }) +
       '</div>' +
-      campo('text', 'traKm', 'Kilómetros totales (ida y vuelta)', t && t.km !== null && t.km !== undefined ? t.km : '',
+      campo('text', 'traKm', 'Kilómetros de ida', t && t.km !== null && t.km !== undefined ? t.km : '',
         { inputmode: 'decimal', placeholder: '0' }) +
       campoSelect('traVehiculo', 'Vehículo', [{ value: '', texto: 'Sin vehículo' }].concat(
         vehiculos.map(v => ({ value: v.id, texto: v.nombre + (v.patente ? ' · ' + v.patente : '') }))
       ), t ? (t.vehiculoId || '') : '') +
       '<div class="field-row">' +
-      campo('text', 'traLitrosKm', 'Litros de gasoil por km', t && t.litrosKm !== null && t.litrosKm !== undefined ? t.litrosKm : '',
+      campo('text', 'traLitrosKm', 'Litros cobrados por km de ida', t && t.litrosKm !== null && t.litrosKm !== undefined ? t.litrosKm : '1',
         { inputmode: 'decimal', placeholder: '1' }) +
       campo('text', 'traPrecioLitro', '$ por litro', t && t.precioLitro !== null && t.precioLitro !== undefined ? t.precioLitro : getCfg('precioLitro', '2500'),
         { inputmode: 'decimal', placeholder: '$' }) +
       '</div>' +
-      '<p class="hint">Viáticos = km × litros por km × $ por litro. Ej: 60 km × 1 l/km × $2.500.</p>' +
+      '<p class="hint">Viáticos al cliente = km de ida × 1 litro × precio del gasoil. Ej.: 50 km × 1 × $2.500 = $125.000. El costo interno del vehículo contempla ida y vuelta.</p>' +
 
       campo('text', 'traManual', 'Importe adicional / global', t && t.montoManual !== null && t.montoManual !== undefined ? t.montoManual : '',
         { inputmode: 'decimal', placeholder: '$', hint: 'Se suma a los conceptos detallados. Para un precio global, dejá los demás precios vacíos.' }) +
@@ -463,15 +465,6 @@ Pantallas.trabajos = {
     await pintarInstalaciones(clienteInicial, insInicial);
     if (selCli) selCli.onchange = () => pintarInstalaciones(selCli.value, '');
 
-    /* ---- Vehículo → autocompleta litros de gasoil por km ---- */
-    const selVeh = document.getElementById('traVehiculo');
-    const inpLitrosKm = document.getElementById('traLitrosKm');
-    if (selVeh && inpLitrosKm) {
-      selVeh.onchange = () => {
-        const v = vehPorId[selVeh.value];
-        if (v && (parseFloat(v.litrosKm) || 0) > 0) inpLitrosKm.value = v.litrosKm;
-      };
-    }
 
     /* ---- Tareas dinámicas ---- */
     const tareasBox = document.getElementById('tareasBox');

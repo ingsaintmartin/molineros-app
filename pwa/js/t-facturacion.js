@@ -363,8 +363,6 @@ async function desglosarTrabajoParaFactura(trabajoId) {
     cantidad: Number(it.cantidad) || 0, precioUnit: Number(it.precioUnit) || 0,
     iva: it.iva == null ? 21 : it.iva, tipoConcepto: it.tipoConcepto || 'material' }));
   const tot = totalesTrabajo(t, materiales, t.vehiculoId ? await getVehiculo(t.vehiculoId) : null);
-  if (tot.manoObra > 0) items.push({ trabajoId: t.id, descripcion: 'Mano de obra (' + t.horas + ' h)',
-    cantidad: 1, precioUnit: tot.manoObra, iva: 21, tipoConcepto: 'servicio' });
   if (tot.viaje > 0) items.push({ trabajoId: t.id, descripcion: 'Traslado (' + t.km + ' km totales)',
     cantidad: 1, precioUnit: tot.viaje, iva: 21, tipoConcepto: 'traslado' });
   if (tot.manual > 0) items.push({ trabajoId: t.id, descripcion: 'Importe adicional / global',

@@ -7,7 +7,7 @@
    3. Cuando no hay señal, sirve lo que tiene en caché.
    ============================================================ */
 
-const CACHE = 'molineroapp-v24';
+const CACHE = 'molineroapp-v25';
 
 // Lista de archivos que se guardan al instalar.
 // IMPORTANTE: Dexie y Leaflet van en vendor/ local (no CDN) para que la app

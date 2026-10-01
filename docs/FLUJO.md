@@ -19,7 +19,7 @@ La app se abre en http://127.0.0.1:4173. El servidor local entrega una configura
 3. Cargar los conceptos: repuesto/material, servicio/mano de obra, traslado o viático. Los servicios habituales permiten iniciar un renglón sin escribir la descripción completa.
 4. Registrar validez, alcance, exclusiones y forma de pago. Compartir el PDF del presupuesto.
 5. Aceptar y registrar quién aprobó. La app crea una orden vinculada al cliente e instalación, con los conceptos acordados y su modo de precios. El presupuesto aceptado se conserva en la interfaz.
-6. Ajustar el trabajo con cantidades y costos reales, horas, vehículo, kilómetros totales, fotos, tareas y gastos directos. Los costos faltantes se señalan como margen estimado.
+6. Ajustar el trabajo con cantidades y costos reales, horas y costo por hora del ayudante, vehículo, kilómetros de ida, fotos, tareas y gastos directos. El ayudante es costo interno, separado del servicio vendido por el dueño. Los viáticos se cobran por km de ida × 1 litro de gasoil × precio del litro; el costo interno del vehículo considera ida y vuelta. Los costos faltantes se señalan como margen estimado.
 7. Pasar el trabajo a **Terminado** y abrir **Revisar liquidación**. Se utiliza el detalle final del trabajo, sin volver a sumar los renglones del presupuesto.
 8. Revisar y guardar el documento interno. El guardado impide incluir el mismo trabajo en otra factura activa.
 9. Emitir la factura fiscal por ARCA o por el sistema autorizado habitual. En el documento interno, usar **Registrar factura emitida** para conservar punto de venta, número, fecha y CAE. Esta referencia se carga manualmente; la app no valida el CAE contra ARCA.

@@ -811,11 +811,11 @@ function totalesTrabajo(t, items, vehiculo, gastos) {
     const tipo = Object.hasOwn(preciosPorConcepto, it.tipoConcepto) ? it.tipoConcepto : 'material';
     preciosPorConcepto[tipo] += c * (parseFloat(it.precioUnit) || 0);
   }
-  const manoObra = items.some(it => it.tipoConcepto === 'servicio') ? 0 :
-    (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
+  // Horas y tarifa representan el costo interno del ayudante, independiente del servicio vendido.
+  const manoObra = (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
   // Viaje (viáticos cobrados): km × litros de gasoil por km × $ por litro (o km × tarifa por km).
   const km = parseFloat(t.km) || 0;
-  const litrosKm = parseFloat(t.litrosKm) || 0;
+  const litrosKm = t.litrosKm == null ? 1 : (parseFloat(t.litrosKm) || 0);
   const precioLitro = parseFloat(t.precioLitro) || 0;
   const viajeCobrado = items.some(it => it.tipoConcepto === 'traslado') ? 0 : (litrosKm > 0 && precioLitro > 0)
     ? km * litrosKm * precioLitro
@@ -825,19 +825,19 @@ function totalesTrabajo(t, items, vehiculo, gastos) {
   // Costo real del vehículo (mantenimiento/combustible): si hay vehículo cargado
   const costoRealKm = numOVacio(t.costoRealKm) ?? (vehiculo ? numOVacio(vehiculo.costoKm) : null);
   const viajeCosto = costoRealKm !== null
-    ? km * costoRealKm
+    ? km * 2 * costoRealKm
     : 0;
 
   const esRI = t.condicionEmisor === 'responsable_inscripto';
   const conceptosVenta = items.map(it => ({ cantidad: it.cantidad, precioUnit: it.precioUnit,
     iva: esRI ? (it.iva == null ? 21 : it.iva) : 0 })).concat([
-    { cantidad: 1, precioUnit: manoObra + viajeCobrado + manual, iva: esRI ? 21 : 0 }
+    { cantidad: 1, precioUnit: viajeCobrado + manual, iva: esRI ? 21 : 0 }
   ]);
   const venta = totalesConIVA(conceptosVenta, esRI ? 21 : 0, t.ivaIncluido);
   const ingresos = venta.neto;
   const gastosDirectos = (gastos || []).filter(g => !g.imputacion || g.imputacion === 'adicional')
     .reduce((s, g) => s + (Number(g.monto) || 0), 0);
-  const costos   = matCosto + viajeCosto + gastosDirectos;
+  const costos   = matCosto + manoObra + viajeCosto + gastosDirectos;
   return {
     materialesCosto: matCosto, materialesPrecio: matPrecio, preciosPorConcepto,
     manoObra: manoObra, viaje: viajeCobrado, viajeCosto: viajeCosto, manual: manual, gastosDirectos,

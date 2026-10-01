@@ -169,10 +169,10 @@ test('totalesTrabajo: ingresos, costos y margen', () => {
   assert.strictEqual(r.viaje, 36000);
   assert.strictEqual(r.materialesPrecio, 33000);
   assert.strictEqual(r.materialesCosto, 21000);
-  assert.strictEqual(r.ingresos, 114000);
-  assert.strictEqual(r.costos, 57000);
-  assert.strictEqual(r.margen, 57000);
-  assert.strictEqual(r.margenPct, 50);
+  assert.strictEqual(r.ingresos, 69000);
+  assert.strictEqual(r.costos, 138000);
+  assert.strictEqual(r.margen, -69000);
+  assert.strictEqual(r.margenPct, -100);
 });
 
 test('totalesTrabajo con monto manual y sin datos', () => {
