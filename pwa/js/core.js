@@ -321,6 +321,69 @@ function campoTexto(id, etiqueta, valor, extra) {
     esc(valor || '') + '</textarea></div>';
 }
 
+/* ---------- Dictado por voz (Web Speech API) ----------
+   microBtnHTML('idCampo') devuelve el botón 🎤 para poner junto a un
+   input/textarea. bindDictadoEn(raíz) lo activa. Si el navegador no lo
+   soporta (p.ej. Safari iOS), no se muestra nada y queda el micrófono
+   propio del teclado. Idioma: español argentino. */
+function dictadoSoportado() {
+  return typeof window !== 'undefined' &&
+    !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+function microBtnHTML(paraId) {
+  if (!dictadoSoportado()) return '';
+  return '<button type="button" class="mini-btn dictado-btn" data-dictado-para="' +
+    esc(paraId) + '" title="Dictar por voz" aria-label="Dictar por voz">🎤</button>';
+}
+let _dictadoRec = null;
+function bindDictadoEn(raiz) {
+  if (!dictadoSoportado()) return;
+  (raiz || document).querySelectorAll('[data-dictado-para]').forEach(btn => {
+    if (btn.dataset.dictadoBound) return;
+    btn.dataset.dictadoBound = '1';
+    btn.addEventListener('click', () => dictarEn(btn));
+  });
+}
+function dictarEn(btn) {
+  const campo = document.getElementById(btn.dataset.dictadoPara);
+  if (!campo) return;
+  // Si ya está escuchando, el toque lo detiene
+  if (_dictadoRec) {
+    try { _dictadoRec.stop(); } catch (e) {}
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.lang = 'es-AR';
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  _dictadoRec = rec;
+  btn.classList.add('escuchando');
+  btn.textContent = '⏺️';
+  const terminar = () => {
+    _dictadoRec = null;
+    btn.classList.remove('escuchando');
+    btn.textContent = '🎤';
+  };
+  rec.onresult = (ev) => {
+    const texto = (ev.results && ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || '';
+    if (texto) {
+      const actual = campo.value || '';
+      campo.value = (actual ? actual.replace(/\s+$/, '') + ' ' : '') + texto.trim();
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
+      campo.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+  rec.onend = terminar;
+  rec.onerror = (ev) => {
+    if (ev && ev.error === 'not-allowed') snack('Permití el micrófono para dictar.');
+    else if (ev && ev.error === 'no-speech') snack('No se escuchó nada, probá de nuevo.');
+    terminar();
+  };
+  try { rec.start(); }
+  catch (e) { terminar(); }
+}
+
 /* ---------- Configuración simple (localStorage) ---------- */
 function getCfg(clave, defecto) {
   try {

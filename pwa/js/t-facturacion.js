@@ -8,6 +8,7 @@ Pantallas.facturacion = {
   titulo: 'Facturación',
 
   async render(params) {
+    _usarTabDoc('facturacion');
     const vista = params.vista || 'lista';
     if (vista === 'detalle') return await facDetalleHTML(params.id);
     if (vista === 'form')    return await facFormHTML(params);
@@ -15,12 +16,20 @@ Pantallas.facturacion = {
   },
 
   async bind(params) {
+    _usarTabDoc('facturacion');
     const vista = params.vista || 'lista';
     if (vista === 'lista')   facListaBind(params.tipo || 'factura');
     if (vista === 'detalle') facDetalleBind(params.id);
     if (vista === 'form')    facFormBind(params);
   }
 };
+
+/* La pantalla de documentos puede vivirse desde la pestaña 'facturacion'
+   o desde la pestaña dedicada 'presupuestos'. _tabDoc indica a qué
+   pestaña volver al navegar (listas, detalle tras guardar, etc.).
+   "Pasar a factura" siempre lleva a la pestaña facturación. */
+let _tabDoc = 'facturacion';
+function _usarTabDoc(t) { _tabDoc = t || 'facturacion'; }
 
 /* ---------- Utilidades ---------- */
 const TIPOS_DOC = {
@@ -34,18 +43,22 @@ function fmtCant(n) {
 }
 
 /* ---------- LISTA ---------- */
-async function facListaHTML(tipo) {
+async function facListaHTML(tipo, ocultarChips) {
   const [facturas, clientes] = await Promise.all([getFacturas(), getClientes()]);
   const nombreCli = {};
   for (const c of clientes) nombreCli[c.id] = c.nombre;
-  const chips = [
-    { v: 'presupuesto', t: 'Presupuestos' },
-    { v: 'factura', t: 'Facturas' },
-    { v: 'recibo', t: 'Recibos' }
-  ];
-  let h = '<div class="chips">' +
-    chips.map(c => '<button class="fchip' + (tipo === c.v ? ' activo' : '') +
-      '" data-tipo="' + c.v + '">' + c.t + '</button>').join('') + '</div><div id="facRows">';
+  let h = '';
+  if (!ocultarChips) {
+    const chips = [
+      { v: 'presupuesto', t: 'Presupuestos' },
+      { v: 'factura', t: 'Facturas' },
+      { v: 'recibo', t: 'Recibos' }
+    ];
+    h += '<div class="chips">' +
+      chips.map(c => '<button class="fchip' + (tipo === c.v ? ' activo' : '') +
+        '" data-tipo="' + c.v + '">' + c.t + '</button>').join('') + '</div>';
+  }
+  h += '<div id="facRows">';
   const lista = facturas.filter(f => (f.tipo || 'factura') === tipo);
   if (!lista.length) {
     h += '<div class="vacio"><span class="emoji">🧾</span>No hay ' + esc(nombreTipoDoc(tipo).toLowerCase()) + 's todavía.</div>';
@@ -65,13 +78,13 @@ async function facListaHTML(tipo) {
 
 function facListaBind(tipo) {
   document.querySelectorAll('[data-tipo]').forEach(b => {
-    b.onclick = () => go('facturacion', { vista: 'lista', tipo: b.dataset.tipo }, true);
+    b.onclick = () => go(_tabDoc, { vista: 'lista', tipo: b.dataset.tipo }, true);
   });
   document.querySelectorAll('[data-ver-fac]').forEach(b => {
-    b.onclick = () => go('facturacion', { vista: 'detalle', id: b.dataset.verFac });
+    b.onclick = () => go(_tabDoc, { vista: 'detalle', id: b.dataset.verFac });
   });
   const nuevo = document.getElementById('facNuevo');
-  if (nuevo) nuevo.onclick = () => go('facturacion', { vista: 'form', tipo: tipo });
+  if (nuevo) nuevo.onclick = () => go(_tabDoc, { vista: 'form', tipo: tipo });
 }
 
 /* ---------- DETALLE ---------- */
@@ -110,6 +123,7 @@ async function facDetalleHTML(id) {
   h += '</div>';
 
   h += '<button class="btn btn-ambar" data-cambiar-estado>🔄 Cambiar estado</button>' +
+    '<button class="btn btn-verde" data-compartir-pdf>📤 Enviar PDF (WhatsApp / Email)</button>' +
     '<button class="btn" data-editar-fac>✏️ Editar</button>';
   if (f.tipo === 'presupuesto') {
     h += '<button class="btn" data-pasar-factura>📄 Pasar a factura</button>';
@@ -137,13 +151,16 @@ function facDetalleBind(id) {
         await actualizarFactura(f);
         cerrarModal();
         snack('Estado: ' + (ESTADOS_FACTURA[f.estado] || f.estado) + '.');
-        go('facturacion', { vista: 'detalle', id: id }, true);
+        go(_tabDoc, { vista: 'detalle', id: id }, true);
       };
     });
   };
 
   const ed = document.querySelector('[data-editar-fac]');
-  if (ed) ed.onclick = () => go('facturacion', { vista: 'form', id: id });
+  if (ed) ed.onclick = () => go(_tabDoc, { vista: 'form', id: id });
+
+  const cp = document.querySelector('[data-compartir-pdf]');
+  if (cp) cp.onclick = () => compartirDocumentoPDF(id);
 
   const pf = document.querySelector('[data-pasar-factura]');
   if (pf) pf.onclick = async () => {
@@ -173,15 +190,17 @@ function facDetalleBind(id) {
     if (!ok) return;
     await eliminarFactura(id);
     snack('Documento eliminado.');
-    go('facturacion', { vista: 'lista', tipo: f.tipo || 'factura' }, true);
+    go(_tabDoc, { vista: 'lista', tipo: f.tipo || 'factura' }, true);
   };
 }
 
 /* ---------- FORM ---------- */
+let _fdescSeq = 0;
 function facItemRowHTML(it) {
   it = it || {};
   return '<div class="item-dinamico"><div class="grid">' +
-    '<input type="text" data-f-desc placeholder="Descripción" value="' + esc(it.descripcion || '') + '" />' +
+    '<div class="con-micro"><input type="text" data-f-desc placeholder="Descripción" value="' + esc(it.descripcion || '') + '" />' +
+    microBtnHTML('fdesc_nuevo') + '</div>' +
     '<input type="number" data-f-cant placeholder="Cant." value="' + esc(it.cantidad !== undefined ? it.cantidad : 1) + '" inputmode="decimal" />' +
     '<button type="button" class="mini-btn" data-f-quitar aria-label="Quitar ítem">✕</button>' +
     '</div><div style="margin-top:8px">' +
@@ -225,7 +244,9 @@ async function facFormHTML(params) {
       '<button class="btn" id="facDesdeTrabajo">🔧 ＋ Desde trabajo</button>';
   }
 
-  h += '<div class="card">' + campoTexto('facObs', 'Observaciones', f ? f.observaciones : '') + '</div>' +
+  h += '<div class="card"><div class="field"><label for="facObs">Observaciones</label>' +
+    '<div class="con-micro"><textarea id="facObs" placeholder="Dictá o escribí…">' +
+    esc(f ? f.observaciones : '') + '</textarea>' + microBtnHTML('facObs') + '</div></div></div>' +
     '<div class="card"><div class="dato"><span class="k"><b>Total</b></span>' +
     '<span class="v"><b id="facTotal">' + esc(formatoPeso(f ? f.total : 0)) + '</b></span></div></div>' +
     '<button class="btn btn-ambar" id="facGuardar">💾 Guardar</button>' +
@@ -265,12 +286,18 @@ function facAgregarFila(it) {
 }
 
 function facBindFila(row) {
+  const desc = row.querySelector('[data-f-desc]');
+  if (desc && !desc.id) desc.id = 'fdesc' + (++_fdescSeq);
+  const mic = row.querySelector('[data-dictado-para]');
+  if (mic && desc) mic.dataset.dictadoPara = desc.id;
+  bindDictadoEn(row);
   row.querySelectorAll('input').forEach(inp => { inp.oninput = facRecalcularTotal; });
   const q = row.querySelector('[data-f-quitar]');
   if (q) q.onclick = () => { row.remove(); facRecalcularTotal(); };
 }
 
 function facFormBind(params) {
+  bindDictadoEn(document.getElementById('view'));
   const cont = document.getElementById('facItems');
   if (cont) {
     cont.querySelectorAll('.item-dinamico').forEach(facBindFila);
@@ -332,7 +359,7 @@ function facFormBind(params) {
       f.fecha = datos.fecha; f.observaciones = datos.observaciones;
       await actualizarFactura(f);
       snack('Documento guardado.');
-      go('facturacion', { vista: 'detalle', id: f.id }, true);
+      go(_tabDoc, { vista: 'detalle', id: f.id }, true);
       return;
     }
     const items = facLeerItems().filter(it => it.descripcion && it.precioUnit > 0 && it.cantidad > 0);
@@ -343,6 +370,6 @@ function facFormBind(params) {
     datos.total = total;
     const f = await crearFactura(datos, items);
     snack(nombreTipoDoc(f.tipo) + ' Nº ' + f.numero + ' creado.');
-    go('facturacion', { vista: 'detalle', id: f.id });
+    go(_tabDoc, { vista: 'detalle', id: f.id });
   };
 }
