@@ -187,6 +187,8 @@ button.fila:active { background: var(--v50); }
 .btn-primary:active { box-shadow: none; }
 .btn-ambar { background: var(--ambar); color: #3a2a00; box-shadow: 0 3px 0 var(--ambar-dark); }
 .btn-ambar:active { box-shadow: none; }
+.btn-verde { background: #25d366; color: #0b3d1f; box-shadow: 0 3px 0 #1aa851; }
+.btn-verde:active { box-shadow: none; }
 .btn-secondary { background: #fff; color: var(--azul); border-color: var(--azul); }
 .btn-ghost { background: transparent; color: var(--muted); }
 .btn-danger { background: var(--peligro); color: #fff; }
@@ -239,6 +241,23 @@ button.fila:active { background: var(--v50); }
   font-size: 1.1rem; background: var(--peligro-bg); color: var(--peligro); font-weight: 800;
 }
 .mini-btn.add { background: var(--v100); color: var(--v700); width: auto; height: auto; padding: 10px 14px; font-size: .9rem; }
+
+/* ---------- Dictado por voz ---------- */
+.con-micro { display: flex; gap: 6px; align-items: stretch; }
+.con-micro input, .con-micro textarea { flex: 1; min-width: 0; }
+.dictado-btn {
+  background: var(--v100); color: var(--v700); flex: 0 0 auto;
+  align-self: flex-end;
+}
+.con-micro .dictado-btn { align-self: stretch; height: auto; min-height: 42px; }
+.dictado-btn.escuchando {
+  background: #ffe1e1; color: #c00;
+  animation: dictado-pulso 1s ease-in-out infinite;
+}
+@keyframes dictado-pulso {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
 
 /* ---------- Fotos ---------- */
 .photo-picker { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
