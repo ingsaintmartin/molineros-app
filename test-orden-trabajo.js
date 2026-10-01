@@ -31,7 +31,7 @@ vm.runInContext(fs.readFileSync(path.join(repo, 'pwa/db.js'), 'utf8') +
   ' crearTrabajoDesdePresupuesto, getTrabajosDePresupuesto,' +
   ' guardarItemsFactura, eliminarPresupuesto, desvincularTrabajosDePresupuesto,' +
   ' totalesConIVA, totalesTrabajo, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,' +
-  ' facturaItemToRow, COLUMNAS, TURSO_DDL };',
+  ' facturaItemToRow, vehiculoToRow, rowToVehiculo, COLUMNAS, TURSO_DDL };',
   sandbox, { filename: 'db.js' });
 
 const { dbLocal, crearFactura, getFactura, getItemsDeFactura,
@@ -39,7 +39,7 @@ const { dbLocal, crearFactura, getFactura, getItemsDeFactura,
   crearTrabajoDesdePresupuesto, getTrabajosDePresupuesto,
   guardarItemsFactura, eliminarPresupuesto, desvincularTrabajosDePresupuesto,
   totalesConIVA, totalesTrabajo, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,
-  facturaItemToRow, COLUMNAS, TURSO_DDL } = sandbox.__x;
+  facturaItemToRow, vehiculoToRow, rowToVehiculo, COLUMNAS, TURSO_DDL } = sandbox.__x;
 
 let ok = 0, fail = 0;
 function check(nombre, cond) {
@@ -110,25 +110,32 @@ function check(nombre, cond) {
   const vinc = await getTrabajosDePresupuesto(pres.id);
   check('getTrabajosDePresupuesto trae 1', vinc.length === 1);
 
-  console.log('— viaje por combustible —');
-  const tv1 = totalesTrabajo({ km: 60, litros: 6, precioLitro: 2500 }, []);
-  check('viaje = litros × $/litro (6×2500=15000)', tv1.viaje === 15000);
+  console.log('— viáticos: km × litros/km × $/litro (solo ida) —');
+  const tv1 = totalesTrabajo({ km: 60, litrosKm: 1, precioLitro: 2500 }, []);
+  check('viaje = km × l/km × $/l (60×1×2500=150000)', tv1.viaje === 150000);
   const tv2 = totalesTrabajo({ km: 60, costoKm: 250 }, []);
-  check('viaje = km × costoKm si no hay litros (60×250=15000)', tv2.viaje === 15000);
-  const tv3 = totalesTrabajo({ km: 60, litros: 6, precioLitro: 2500, montoManual: 42350 }, []);
+  check('viaje = km × costoKm si no hay l/km (60×250=15000)', tv2.viaje === 15000);
+  const tv3 = totalesTrabajo({ km: 60, litrosKm: 1, precioLitro: 2500, montoManual: 42350 }, []);
   check('ingresos incluyen monto manual heredado', tv3.ingresos === 42350);
-  check('costos incluyen el viaje', tv3.costos === 15000);
-  const rowC = trabajoToRow({ id: 'x', litros: 6, precioLitro: 2500 });
-  check('trabajoToRow mapea litros/precio_litro',
-    rowC.litros === 6 && rowC.precio_litro === 2500);
+  check('costos incluyen el viaje', tv3.costos === 150000);
+  const rowC = trabajoToRow({ id: 'x', litrosKm: 1, precioLitro: 2500 });
+  check('trabajoToRow mapea litros_km/precio_litro',
+    rowC.litros_km === 1 && rowC.precio_litro === 2500);
   const backC = rowToTrabajo(rowC);
-  check('rowToTrabajo devuelve litros/precioLitro',
-    backC.litros === 6 && backC.precioLitro === 2500);
-  check('COLUMNAS.trabajos incluye litros',
-    COLUMNAS.trabajos.includes('litros') && COLUMNAS.trabajos.includes('precio_litro'));
+  check('rowToTrabajo devuelve litrosKm/precioLitro',
+    backC.litrosKm === 1 && backC.precioLitro === 2500);
+  check('COLUMNAS.trabajos incluye litros_km',
+    COLUMNAS.trabajos.includes('litros_km') && COLUMNAS.trabajos.includes('precio_litro'));
   check('TURSO_DDL agrega columnas de combustible',
-    TURSO_DDL.some(s => /ADD COLUMN litros/.test(s)) &&
+    TURSO_DDL.some(s => /ADD COLUMN litros_km/.test(s)) &&
     TURSO_DDL.some(s => /ADD COLUMN precio_litro/.test(s)));
+  const rowV = vehiculoToRow({ id: 'v1', nombre: 'Ranger', litrosKm: 1 });
+  check('vehiculoToRow mapea litros_km', rowV.litros_km === 1);
+  const backV = rowToVehiculo(rowV);
+  check('rowToVehiculo devuelve litrosKm', backV.litrosKm === 1);
+  check('COLUMNAS.vehiculos incluye litros_km', COLUMNAS.vehiculos.includes('litros_km'));
+  check('TURSO_DDL agrega litros_km a vehiculos',
+    TURSO_DDL.some(s => /vehiculos ADD COLUMN litros_km/.test(s)));
 
   console.log('— flexibilidad: modificar, agregar, quitar —');
   ord1.descripcion = 'Orden modificada';
