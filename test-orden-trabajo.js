@@ -29,15 +29,17 @@ vm.runInContext(fs.readFileSync(path.join(repo, 'pwa/db.js'), 'utf8') +
   '\n;globalThis.__x = { dbLocal, crearFactura, getFactura, getItemsDeFactura,' +
   ' crearTrabajo, actualizarTrabajo, eliminarTrabajo, getTrabajo,' +
   ' crearTrabajoDesdePresupuesto, getTrabajosDePresupuesto,' +
-  ' totalesConIVA, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,' +
-  ' COLUMNAS, TURSO_DDL };',
+  ' guardarItemsFactura, eliminarPresupuesto, desvincularTrabajosDePresupuesto,' +
+  ' totalesConIVA, totalesTrabajo, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,' +
+  ' facturaItemToRow, vehiculoToRow, rowToVehiculo, COLUMNAS, TURSO_DDL };',
   sandbox, { filename: 'db.js' });
 
 const { dbLocal, crearFactura, getFactura, getItemsDeFactura,
   crearTrabajo, actualizarTrabajo, eliminarTrabajo, getTrabajo,
   crearTrabajoDesdePresupuesto, getTrabajosDePresupuesto,
-  totalesConIVA, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,
-  COLUMNAS, TURSO_DDL } = sandbox.__x;
+  guardarItemsFactura, eliminarPresupuesto, desvincularTrabajosDePresupuesto,
+  totalesConIVA, totalesTrabajo, facturaToRow, rowToFactura, trabajoToRow, rowToTrabajo,
+  facturaItemToRow, vehiculoToRow, rowToVehiculo, COLUMNAS, TURSO_DDL } = sandbox.__x;
 
 let ok = 0, fail = 0;
 function check(nombre, cond) {
@@ -101,11 +103,39 @@ function check(nombre, cond) {
   check('orden hereda tareas de los ítems',
     Array.isArray(ord1.tareas) && ord1.tareas.length === 1 && /Cambiar cueros/.test(ord1.tareas[0]));
   check('orden nace a_hacer', ord1.estado === 'a_hacer');
+  check('orden hereda el monto del presupuesto', ord1.montoManual === 42350);
 
   const ord2 = await crearTrabajoDesdePresupuesto(pres.id);
   check('idempotente: no duplica', ord2.id === ord1.id);
   const vinc = await getTrabajosDePresupuesto(pres.id);
   check('getTrabajosDePresupuesto trae 1', vinc.length === 1);
+
+  console.log('— viáticos: km × litros/km × $/litro (solo ida) —');
+  const tv1 = totalesTrabajo({ km: 60, litrosKm: 1, precioLitro: 2500 }, []);
+  check('viaje = km × l/km × $/l (60×1×2500=150000)', tv1.viaje === 150000);
+  const tv2 = totalesTrabajo({ km: 60, costoKm: 250 }, []);
+  check('viaje = km × costoKm si no hay l/km (60×250=15000)', tv2.viaje === 15000);
+  const tv3 = totalesTrabajo({ km: 60, litrosKm: 1, precioLitro: 2500, montoManual: 42350 }, []);
+  check('ingresos incluyen monto manual heredado', tv3.ingresos === 42350);
+  check('costos incluyen el viaje', tv3.costos === 150000);
+  const rowC = trabajoToRow({ id: 'x', litrosKm: 1, precioLitro: 2500 });
+  check('trabajoToRow mapea litros_km/precio_litro',
+    rowC.litros_km === 1 && rowC.precio_litro === 2500);
+  const backC = rowToTrabajo(rowC);
+  check('rowToTrabajo devuelve litrosKm/precioLitro',
+    backC.litrosKm === 1 && backC.precioLitro === 2500);
+  check('COLUMNAS.trabajos incluye litros_km',
+    COLUMNAS.trabajos.includes('litros_km') && COLUMNAS.trabajos.includes('precio_litro'));
+  check('TURSO_DDL agrega columnas de combustible',
+    TURSO_DDL.some(s => /ADD COLUMN litros_km/.test(s)) &&
+    TURSO_DDL.some(s => /ADD COLUMN precio_litro/.test(s)));
+  const rowV = vehiculoToRow({ id: 'v1', nombre: 'Ranger', litrosKm: 1 });
+  check('vehiculoToRow mapea litros_km', rowV.litros_km === 1);
+  const backV = rowToVehiculo(rowV);
+  check('rowToVehiculo devuelve litrosKm', backV.litrosKm === 1);
+  check('COLUMNAS.vehiculos incluye litros_km', COLUMNAS.vehiculos.includes('litros_km'));
+  check('TURSO_DDL agrega litros_km a vehiculos',
+    TURSO_DDL.some(s => /vehiculos ADD COLUMN litros_km/.test(s)));
 
   console.log('— flexibilidad: modificar, agregar, quitar —');
   ord1.descripcion = 'Orden modificada';
@@ -126,6 +156,31 @@ function check(nombre, cond) {
   const vinc3 = await getTrabajosDePresupuesto(pres.id);
   check('se puede quitar una orden', vinc3.length === 1 && vinc3[0].id === ord1.id);
   check('getTrabajosDePresupuesto vacío para otro id', (await getTrabajosDePresupuesto('nope')).length === 0);
+
+  console.log('— editar ítems del documento —');
+  await guardarItemsFactura(pres.id, [
+    { descripcion: 'Cambiar cueros', cantidad: 1, precioUnit: 35000, iva: 21, trabajoId: null },
+    { descripcion: 'Viaje', cantidad: 1, precioUnit: 15000, iva: 21, trabajoId: 'traX' }
+  ]);
+  const itemsEdit = await getItemsDeFactura(pres.id);
+  check('ítems reemplazados (2)', itemsEdit.length === 2);
+  check('trabajoId se conserva', itemsEdit.some(x => x.trabajoId === 'traX'));
+  check('facturaItemToRow mapea trabajo_id',
+    facturaItemToRow(itemsEdit.find(x => x.trabajoId === 'traX')).trabajo_id === 'traX');
+  const totEdit = totalesConIVA(itemsEdit, 21, false);
+  check('totales recalculados más IVA (neto 50000/iva 10500/total 60500)',
+    totEdit.neto === 50000 && totEdit.iva === 10500 && totEdit.total === 60500);
+
+  console.log('— eliminar presupuesto desvincula órdenes —');
+  const nDesv = await desvincularTrabajosDePresupuesto(pres.id);
+  check('desvincula 1 orden', nDesv === 1);
+  const ordHuerf = await getTrabajo(ord1.id);
+  check('la orden se conserva', !!ordHuerf);
+  check('la orden queda independiente', ordHuerf.presupuestoId === null);
+  await eliminarPresupuesto(pres.id);
+  check('presupuesto eliminado', (await getFactura(pres.id)) === undefined);
+  check('ítems del presupuesto borrados', (await getItemsDeFactura(pres.id)).length === 0);
+  check('la orden sigue existiendo tras eliminar', !!(await getTrabajo(ord1.id)));
 
   await dbLocal.close();
   console.log('\n' + ok + ' ok, ' + fail + ' fallos.');

@@ -184,18 +184,21 @@ Pantallas.trabajos = {
     h += '</div>';
 
     // Mano de obra / viaje / monto manual
-    if ((parseFloat(t.horas) || 0) > 0 || (parseFloat(t.montoManual) || 0) > 0 || (parseFloat(t.km) || 0) > 0) {
+    if ((parseFloat(t.horas) || 0) > 0 || (parseFloat(t.montoManual) || 0) > 0 || (parseFloat(t.km) || 0) > 0 || (parseFloat(t.litrosKm) || 0) > 0) {
       h += '<div class="card"><div class="sec-titulo">🧾 Conceptos</div>';
       if ((parseFloat(t.horas) || 0) > 0) {
         h += '<div class="dato"><span class="k">Mano de obra (' + esc(t.horas) + ' h × ' +
           esc(formatoPeso(t.tarifaHora)) + ')</span><span class="v">' + esc(formatoPeso(tot.manoObra)) + '</span></div>';
       }
-      if ((parseFloat(t.km) || 0) > 0) {
+      if ((parseFloat(t.litrosKm) || 0) > 0 && (parseFloat(t.precioLitro) || 0) > 0) {
+        h += '<div class="dato"><span class="k">Viaje (' + esc(t.km || 0) + ' km × ' + esc(t.litrosKm) + ' l/km × ' +
+          esc(formatoPeso(t.precioLitro)) + ')</span><span class="v">' + esc(formatoPeso(tot.viaje)) + '</span></div>';
+      } else if ((parseFloat(t.km) || 0) > 0) {
         h += '<div class="dato"><span class="k">Viaje (' + esc(t.km) + ' km × ' +
           esc(formatoPeso(t.costoKm)) + ')</span><span class="v">' + esc(formatoPeso(tot.viaje)) + '</span></div>';
       }
       if ((parseFloat(t.montoManual) || 0) > 0) {
-        h += '<div class="dato"><span class="k">Monto manual</span><span class="v">' +
+        h += '<div class="dato"><span class="k">Monto manual' + (t.presupuestoId ? ' (según presupuesto)' : '') + '</span><span class="v">' +
           esc(formatoPeso(tot.manual)) + '</span></div>';
       }
       h += '</div>';
@@ -381,13 +384,18 @@ Pantallas.trabajos = {
       campo('text', 'traTarifa', 'Tarifa por hora', t && t.tarifaHora !== null && t.tarifaHora !== undefined ? t.tarifaHora : getCfg('tarifaHora', ''),
         { inputmode: 'decimal', placeholder: '$' }) +
       '</div>' +
-      campo('text', 'traKm', 'Kilómetros', t && t.km !== null && t.km !== undefined ? t.km : '',
+      campo('text', 'traKm', 'Kilómetros (solo ida)', t && t.km !== null && t.km !== undefined ? t.km : '',
         { inputmode: 'decimal', placeholder: '0' }) +
       campoSelect('traVehiculo', 'Vehículo', [{ value: '', texto: 'Sin vehículo' }].concat(
         vehiculos.map(v => ({ value: v.id, texto: v.nombre + (v.patente ? ' · ' + v.patente : '') }))
       ), '') +
-      campo('text', 'traCostoKm', 'Costo por km', t && t.costoKm !== null && t.costoKm !== undefined ? t.costoKm : getCfg('costoKm', ''),
+      '<div class="field-row">' +
+      campo('text', 'traLitrosKm', 'Litros de gasoil por km', t && t.litrosKm !== null && t.litrosKm !== undefined ? t.litrosKm : '',
+        { inputmode: 'decimal', placeholder: '1' }) +
+      campo('text', 'traPrecioLitro', '$ por litro', t && t.precioLitro !== null && t.precioLitro !== undefined ? t.precioLitro : getCfg('precioLitro', '2500'),
         { inputmode: 'decimal', placeholder: '$' }) +
+      '</div>' +
+      '<p class="hint">Viáticos = km × litros por km × $ por litro. Ej: 60 km × 1 l/km × $2.500.</p>' +
 
       campo('text', 'traManual', 'Monto manual', t && t.montoManual !== null && t.montoManual !== undefined ? t.montoManual : '',
         { inputmode: 'decimal', placeholder: '$', hint: 'Monto global si no detallás mano de obra ni materiales' }) +
@@ -431,13 +439,13 @@ Pantallas.trabajos = {
     await pintarInstalaciones(clienteInicial, insInicial);
     if (selCli) selCli.onchange = () => pintarInstalaciones(selCli.value, '');
 
-    /* ---- Vehículo → autocompleta costo/km ---- */
+    /* ---- Vehículo → autocompleta litros de gasoil por km ---- */
     const selVeh = document.getElementById('traVehiculo');
-    const inpCostoKm = document.getElementById('traCostoKm');
-    if (selVeh && inpCostoKm) {
+    const inpLitrosKm = document.getElementById('traLitrosKm');
+    if (selVeh && inpLitrosKm) {
       selVeh.onchange = () => {
         const v = vehPorId[selVeh.value];
-        if (v && (parseFloat(v.costoKm) || 0) > 0) inpCostoKm.value = v.costoKm;
+        if (v && (parseFloat(v.litrosKm) || 0) > 0) inpLitrosKm.value = v.litrosKm;
       };
     }
 
@@ -570,7 +578,9 @@ Pantallas.trabajos = {
       datos.horas = valNum('traHoras');
       datos.tarifaHora = valNum('traTarifa');
       datos.km = valNum('traKm');
-      datos.costoKm = valNum('traCostoKm');
+      datos.litrosKm = valNum('traLitrosKm');
+      datos.precioLitro = valNum('traPrecioLitro');
+      datos.costoKm = (t && t.costoKm) || null;
       datos.montoManual = valNum('traManual');
       datos.observaciones = val('traObs');
       datos.fotos = getFotos('traForm');

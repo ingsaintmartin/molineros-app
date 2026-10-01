@@ -275,6 +275,7 @@ function trabajoToRow(t) {
     piezas_texto: t.piezasTexto || null,
     horas: numOVacio(t.horas), tarifa_hora: numOVacio(t.tarifaHora),
     km: numOVacio(t.km), costo_km: numOVacio(t.costoKm),
+    litros_km: numOVacio(t.litrosKm), precio_litro: numOVacio(t.precioLitro),
     monto_manual: numOVacio(t.montoManual),
     estado: t.estado || 'a_hacer', observaciones: t.observaciones || null,
     fotos: JSON.stringify(t.fotos || []),
@@ -290,6 +291,7 @@ function rowToTrabajo(r) {
     piezasTexto: r.piezas_texto || '',
     horas: r.horas ?? null, tarifaHora: r.tarifa_hora ?? null,
     km: r.km ?? null, costoKm: r.costo_km ?? null,
+    litrosKm: r.litros_km ?? null, precioLitro: r.precio_litro ?? null,
     montoManual: r.monto_manual ?? null,
     estado: r.estado || 'a_hacer', observaciones: r.observaciones || '',
     fotos: jsonFromDb(r.fotos, []),
@@ -393,6 +395,7 @@ function vehiculoToRow(v) {
   return {
     id: v.id, nombre: v.nombre || '', patente: v.patente || null,
     km_actual: numOVacio(v.kmActual) ?? 0, costo_km: numOVacio(v.costoKm) ?? 0,
+    litros_km: numOVacio(v.litrosKm) ?? 0,
     observaciones: v.observaciones || null,
     created_at: v.createdAt || Date.now()
   };
@@ -401,6 +404,7 @@ function rowToVehiculo(r) {
   return {
     id: r.id, nombre: r.nombre || '', patente: r.patente || '',
     kmActual: r.km_actual ?? 0, costoKm: r.costo_km ?? 0,
+    litrosKm: r.litros_km ?? 0,
     observaciones: r.observaciones || '', createdAt: r.created_at
   };
 }
@@ -502,7 +506,7 @@ const COLUMNAS = {
   instalaciones: ['id', 'cliente_id', 'establecimiento_id', 'tipo', 'nombre', 'marca', 'modelo', 'caracteristicas',
                   'estado', 'observaciones', 'lat', 'lng', 'fotos', 'created_at', 'updated_at'],
   trabajos:      ['id', 'instalacion_id', 'cliente_id', 'fecha', 'descripcion', 'tareas', 'piezas_texto',
-                  'horas', 'tarifa_hora', 'km', 'costo_km', 'monto_manual',
+                  'horas', 'tarifa_hora', 'km', 'costo_km', 'litros_km', 'precio_litro', 'monto_manual',
                   'estado', 'observaciones', 'fotos', 'presupuesto_id', 'created_at', 'updated_at'],
   trabajo_items: ['id', 'trabajo_id', 'repuesto_id', 'descripcion', 'cantidad', 'costo_unit', 'precio_unit', 'created_at'],
   repuestos:     ['id', 'nombre', 'categoria', 'stock', 'stock_min', 'costo', 'precio', 'created_at', 'updated_at'],
@@ -510,7 +514,7 @@ const COLUMNAS = {
                   'iva_incluido', 'observaciones', 'created_at', 'updated_at'],
   factura_items: ['id', 'factura_id', 'trabajo_id', 'descripcion', 'cantidad', 'precio_unit', 'iva', 'created_at'],
   gastos:        ['id', 'fecha', 'categoria', 'descripcion', 'monto', 'trabajo_id', 'vehiculo_id', 'created_at'],
-  vehiculos:     ['id', 'nombre', 'patente', 'km_actual', 'costo_km', 'observaciones', 'created_at'],
+  vehiculos:     ['id', 'nombre', 'patente', 'km_actual', 'costo_km', 'litros_km', 'observaciones', 'created_at'],
   empresa:       ['id', 'nombre', 'cuit', 'condicion_fiscal', 'domicilio', 'localidad', 'telefono', 'email',
                   'punto_venta', 'logo', 'created_at', 'updated_at']
 };
@@ -537,7 +541,8 @@ const TURSO_DDL = [
   `CREATE TABLE IF NOT EXISTS trabajos (
      id TEXT PRIMARY KEY, instalacion_id TEXT, cliente_id TEXT, fecha TEXT,
      descripcion TEXT, tareas TEXT, piezas_texto TEXT, horas REAL,
-     tarifa_hora REAL, km REAL, costo_km REAL, monto_manual REAL,
+     tarifa_hora REAL, km REAL, costo_km REAL, litros_km REAL, precio_litro REAL,
+     monto_manual REAL,
      estado TEXT, observaciones TEXT, fotos TEXT, presupuesto_id TEXT,
      created_at INTEGER, updated_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS trabajo_items (
@@ -565,7 +570,7 @@ const TURSO_DDL = [
      monto REAL, trabajo_id TEXT, vehiculo_id TEXT, created_at INTEGER)`,
   `CREATE TABLE IF NOT EXISTS vehiculos (
      id TEXT PRIMARY KEY, nombre TEXT, patente TEXT, km_actual REAL,
-     costo_km REAL, observaciones TEXT, created_at INTEGER)`,
+     costo_km REAL, litros_km REAL, observaciones TEXT, created_at INTEGER)`,
   // Columnas nuevas en tablas que ya existían (se ignoran si ya están)
   `ALTER TABLE clientes ADD COLUMN cuit TEXT`,
   `ALTER TABLE clientes ADD COLUMN condicion_fiscal TEXT`,
@@ -576,6 +581,9 @@ const TURSO_DDL = [
   `ALTER TABLE factura_items ADD COLUMN iva REAL`,
   `ALTER TABLE instalaciones ADD COLUMN establecimiento_id TEXT`,
   `ALTER TABLE trabajos ADD COLUMN presupuesto_id TEXT`,
+  `ALTER TABLE trabajos ADD COLUMN litros_km REAL`,
+  `ALTER TABLE trabajos ADD COLUMN precio_litro REAL`,
+  `ALTER TABLE vehiculos ADD COLUMN litros_km REAL`,
   `ALTER TABLE facturas ADD COLUMN iva_incluido INTEGER`,
   `CREATE INDEX IF NOT EXISTS idx_ins_cliente ON instalaciones(cliente_id)`,
   `CREATE INDEX IF NOT EXISTS idx_ins_est ON instalaciones(establecimiento_id)`,
@@ -750,7 +758,14 @@ function totalesTrabajo(t, items) {
     matPrecio += c * (parseFloat(it.precioUnit) || 0);
   }
   const manoObra = (parseFloat(t.horas) || 0) * (parseFloat(t.tarifaHora) || 0);
-  const viaje    = (parseFloat(t.km) || 0) * (parseFloat(t.costoKm) || 0);
+  // Viaje (viáticos): km × litros de gasoil por km × $ por litro (solo ida).
+  // Si no hay litros/km cargados, se usa el costo por km directo (compatibilidad).
+  const km = parseFloat(t.km) || 0;
+  const litrosKm = parseFloat(t.litrosKm) || 0;
+  const precioLitro = parseFloat(t.precioLitro) || 0;
+  const viaje = (litrosKm > 0 && precioLitro > 0)
+    ? km * litrosKm * precioLitro
+    : km * (parseFloat(t.costoKm) || 0);
   const manual   = parseFloat(t.montoManual) || 0;
   const ingresos = manoObra + matPrecio + manual;
   const costos   = matCosto + viaje;
@@ -1003,12 +1018,15 @@ async function crearTrabajoDesdePresupuesto(presId) {
     const cTxt = (Math.round(c) === c) ? String(c) : String(Math.round(c * 100) / 100);
     return cTxt + ' × ' + (it.descripcion || 'Ítem');
   });
+  // La orden hereda el monto acordado en el presupuesto
+  const tot = totalesConIVA(items || [], 21, f.ivaIncluido !== false);
   const t = await crearTrabajo({
     clienteId: f.clienteId || null,
     instalacionId: null,
     fecha: hoyISO(),
     descripcion: 'Orden de trabajo · Presupuesto Nº ' + (f.numero || ''),
     tareas: tareas,
+    montoManual: tot.total || null,
     estado: 'a_hacer',
     observaciones: (f.observaciones || ''),
     presupuestoId: presId
@@ -1206,6 +1224,47 @@ async function actualizarFactura(datos) {
   await dbLocal.facturas.put(datos);
   await registrarOperacion({ tipo: 'upsert', tabla: 'facturas', row: facturaToRow(datos) });
   return datos;
+}
+
+// Reemplaza los ítems de un documento (al editar): borra los anteriores y
+// guarda los nuevos, con sus operaciones de sincronización.
+async function guardarItemsFactura(facturaId, items) {
+  const ahora = Date.now();
+  const ops = [];
+  await dbLocal.transaction('rw', dbLocal.factura_items, async () => {
+    const anteriores = await dbLocal.factura_items.where('facturaId').equals(facturaId).toArray();
+    for (const x of anteriores) ops.push({ tipo: 'delete', tabla: 'factura_items', id: x.id, createdAt: ahora });
+    await dbLocal.factura_items.where('facturaId').equals(facturaId).delete();
+    for (const it of items || []) {
+      const nuevo = {
+        id: genId('fit'), facturaId: facturaId, trabajoId: it.trabajoId || null,
+        descripcion: it.descripcion || '', cantidad: parseFloat(it.cantidad) || 1,
+        precioUnit: numOVacio(it.precioUnit) ?? 0,
+        iva: it.iva === undefined || it.iva === null || it.iva === '' ? null : parseFloat(it.iva),
+        createdAt: ahora
+      };
+      await dbLocal.factura_items.add(nuevo);
+      ops.push({ tipo: 'upsert', tabla: 'factura_items', row: facturaItemToRow(nuevo), createdAt: ahora });
+    }
+  });
+  await dbLocal.pendientes.bulkAdd(ops);
+  if (nubeLista()) await subirPendientes();
+}
+
+// Desvincula las órdenes de trabajo de un presupuesto (quedan como trabajos
+// independientes). Se usa al eliminar el presupuesto.
+async function desvincularTrabajosDePresupuesto(presId) {
+  const lista = await getTrabajosDePresupuesto(presId);
+  for (const t of lista) {
+    t.presupuestoId = null;
+    await actualizarTrabajo(t);
+  }
+  return lista.length;
+}
+
+async function eliminarPresupuesto(id) {
+  await desvincularTrabajosDePresupuesto(id);
+  await eliminarFactura(id);
 }
 
 async function eliminarFactura(id) {

@@ -45,6 +45,7 @@ Pantallas.mas = {
     h += '<div class="card"><div class="sec-titulo">⚙️ Configuración</div><div class="form">' +
       campo('number', 'cfgTarifa', 'Tarifa por hora por defecto ($)', getCfg('tarifaHora', ''), { inputmode: 'decimal' }) +
       campo('number', 'cfgCostoKm', 'Costo por km por defecto ($)', getCfg('costoKm', ''), { inputmode: 'decimal' }) +
+      campo('number', 'cfgPrecioLitro', 'Precio del litro de gasoil por defecto ($)', getCfg('precioLitro', '2500'), { inputmode: 'decimal' }) +
       '<button class="btn btn-ambar" id="btnCfgGuardar">Guardar</button>' +
       '</div></div>';
 
@@ -117,6 +118,7 @@ Pantallas.mas = {
       btnCfgGuardar.onclick = () => {
         setCfg('tarifaHora', val('cfgTarifa'));
         setCfg('costoKm', val('cfgCostoKm'));
+        setCfg('precioLitro', val('cfgPrecioLitro'));
         snack('Configuración guardada.');
       };
     }
