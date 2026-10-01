@@ -7,7 +7,7 @@
    3. Cuando no hay señal, sirve lo que tiene en caché.
    ============================================================ */
 
-const CACHE = 'molineroapp-v6';
+const CACHE = 'molineroapp-v7';
 
 // Lista de archivos que se guardan al instalar.
 // IMPORTANTE: Dexie y Leaflet van en vendor/ local (no CDN) para que la app
@@ -27,6 +27,7 @@ const ARCHIVOS = [
   './turso-config.js',
   './js/core.js',
   './js/eco.js',
+  './js/seed.js',
   './js/exif-gps.js',
   './js/mapa.js',
   './js/t-inicio.js',

@@ -36,6 +36,10 @@ Pantallas.mas = {
       '<span class="ico">🔄</span>' +
       '<span><span class="t">Sincronizar ahora</span><br><span class="b">Sube y baja los cambios de la nube</span></span>' +
       '<span class="chev">›</span></button>' +
+      '<button class="menu-item" id="btnEjemplo">' +
+      '<span class="ico">🧪</span>' +
+      '<span><span class="t">Cargar datos de ejemplo</span><br><span class="b">Cliente, molinos, trabajos y stock de prueba</span></span>' +
+      '<span class="chev">›</span></button>' +
       '</div><input type="file" id="impFile" accept="application/json,.json" hidden /></div>';
 
     h += '<div class="card"><div class="sec-titulo">⚙️ Configuración</div><div class="form">' +
@@ -97,6 +101,16 @@ Pantallas.mas = {
 
     const btnSinc = document.getElementById('btnSinc');
     if (btnSinc) btnSinc.onclick = () => sincronizarAhora();
+
+    const btnEjemplo = document.getElementById('btnEjemplo');
+    if (btnEjemplo) {
+      btnEjemplo.onclick = async () => {
+        const ok = await confirmar('Datos de ejemplo', 'Se cargará un cliente de prueba con molinos, trabajos, stock y facturas. ¿Continuar?', 'Cargar');
+        if (!ok) return;
+        const creado = await cargarDatosEjemplo();
+        if (creado) go('inicio', {}, true);
+      };
+    }
 
     const btnCfgGuardar = document.getElementById('btnCfgGuardar');
     if (btnCfgGuardar) {
