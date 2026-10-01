@@ -110,7 +110,8 @@ dbLocal.version(4).stores({
 
     // Operaciones pendientes viejas: los upsert ya quedaron cubiertos por la
     // migración (la tabla local tiene lo último); los deletes se traducen.
-    const opsViejas = await tPend.where('tabla').anyOf('molinos', 'reparaciones').toArray();
+    // 'tabla' no es índice Dexie: filtrar en memoria en vez de where()
+    const opsViejas = (await tPend.toArray()).filter(op => op.tabla === 'molinos' || op.tabla === 'reparaciones');
     for (const op of opsViejas) {
       if (op.tipo === 'delete') {
         await tPend.add({
@@ -970,7 +971,8 @@ async function actualizarRepuesto(datos) {
 }
 async function eliminarRepuesto(id) {
   // Los ítems de trabajos que lo usaban quedan con la descripción histórica
-  const items = await dbLocal.trabajo_items.where('repuestoId').equals(id).toArray();
+  // 'repuestoId' no es índice Dexie: filtrar en memoria en vez de where()
+  const items = await dbLocal.trabajo_items.filter(it => it.repuestoId === id).toArray();
   const ahora = Date.now();
   const ops = [];
   for (const it of items) {
@@ -992,7 +994,8 @@ async function getRepuesto(id) { return dbLocal.repuestos.get(id); }
 // FACTURACIÓN (presupuestos, facturas, recibos)
 // ------------------------------------------------------------------
 async function proximoNumero(tipo) {
-  const lista = await dbLocal.facturas.where('tipo').equals(tipo).toArray();
+  // 'tipo' no es índice Dexie: filtrar en memoria en vez de where()
+  const lista = await dbLocal.facturas.filter(f => (f.tipo || 'factura') === tipo).toArray();
   let max = 0;
   for (const f of lista) {
     const n = parseInt(String(f.numero).replace(/\D/g, ''), 10);
@@ -1103,7 +1106,8 @@ async function actualizarVehiculo(datos) {
   return datos;
 }
 async function eliminarVehiculo(id) {
-  const gastos = await dbLocal.gastos.where('vehiculoId').equals(id).toArray();
+  // 'vehiculoId' no es índice Dexie: filtrar en memoria en vez de where()
+  const gastos = await dbLocal.gastos.filter(g => g.vehiculoId === id).toArray();
   const ahora = Date.now();
   const ops = [];
   for (const g of gastos) {
