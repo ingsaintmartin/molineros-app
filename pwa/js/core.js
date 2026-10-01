@@ -374,6 +374,24 @@ async function sincronizarAhora() {
 }
 
 /* ---------- Arranque ---------- */
+async function sembrarDemoSiCorresponde() {
+  // Si la base está vacía, carga los datos de ejemplo una sola vez por
+  // equipo. Así quien abre el link por primera vez ve la app completa
+  // sin tocar nada. La sincronización previa ya bajó lo de la nube, así
+  // que si otro equipo sembró antes, acá no se duplica.
+  try {
+    if (localStorage.getItem('demoAutoV1')) return;
+    const clientes = await getClientes();
+    if (clientes.length > 0) return;
+    const creado = await cargarDatosEjemplo();
+    if (creado) {
+      try { localStorage.setItem('demoAutoV1', '1'); } catch (e) {}
+      if (nubeLista()) { try { await sincronizar(); } catch (e) {} }
+      render();
+    }
+  } catch (e) { console.warn('No se pudo sembrar la demo:', e); }
+}
+
 async function iniciar() {
   // Tabs
   document.querySelectorAll('.tab').forEach(b => {
@@ -394,7 +412,11 @@ async function iniciar() {
   actualizarEstadoSync();
   // Sincroniza al abrir si hay conexión
   if (nubeLista()) {
-    sincronizar().then(ok => { if (ok) render(); }).catch(() => {});
+    sincronizar()
+      .then(async ok => { if (ok) render(); await sembrarDemoSiCorresponde(); })
+      .catch(() => { sembrarDemoSiCorresponde(); });
     actualizarEstadoSync();
+  } else {
+    sembrarDemoSiCorresponde();
   }
 }
